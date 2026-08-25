@@ -1,0 +1,11 @@
+# Foundry
+broadcast/
+cache/
+lib/
+out/
+
+# Environment
+.env
+
+# Editor Temporary Files
+*.swp
