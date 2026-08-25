@@ -7,5 +7,5 @@ out/
 # Environment
 .env
 
-# Editor Temporary Files
+# Vim Swap Files
 *.swp
