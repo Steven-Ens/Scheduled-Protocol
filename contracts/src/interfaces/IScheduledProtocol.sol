@@ -3,7 +3,7 @@
 pragma solidity 0.8.35;
 
 /**
- * @dev External interface for ScheduledProtocol.
+ * @dev External interface for Scheduled Protocol.
  */
 interface IScheduledProtocol {
     /**
@@ -70,11 +70,7 @@ interface IScheduledProtocol {
     /**
      * @dev Emitted when occurrence `occurrenceIndex` of payment schedule `paymentId` is successfully executed.
      */
-    event PaymentExecuted(
-        uint256 indexed paymentId,
-        uint32 indexed occurrenceIndex,
-        address indexed executor
-    );
+    event PaymentExecuted(uint256 indexed paymentId, uint32 indexed occurrenceIndex, address indexed executor);
 
     /**
      * @dev Emitted when payment schedule `paymentId` is cancelled by its payer.
@@ -113,6 +109,11 @@ interface IScheduledProtocol {
      * Emits a {PaymentCancelled} event.
      */
     function cancelPayment(uint256 paymentId) external;
+
+    /**
+     * @dev Returns payment schedule `paymentId`.
+     */
+    function getPayment(uint256 paymentId) external view returns (Payment memory payment);
 
     /**
      * @dev Returns the current lifecycle state of payment schedule `paymentId`.
