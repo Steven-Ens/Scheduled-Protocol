@@ -31,6 +31,12 @@ contract ScheduledProtocol is IScheduledProtocol {
             revert ScheduledProtocolInvalidAmount(amount);
         }
 
+        // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.
+        // forge-lint: disable-next-line(block-timestamp)
+        if (executeAfter <= block.timestamp) {
+            revert ScheduledProtocolInvalidExecuteAfter(executeAfter);
+        }
+
         paymentId = _nextPaymentId;
         Payment storage payment = _payments[paymentId];
 

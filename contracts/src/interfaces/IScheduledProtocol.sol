@@ -62,6 +62,11 @@ interface IScheduledProtocol {
     error ScheduledProtocolInvalidAmount(uint96 amount);
 
     /**
+     * @dev `executeAfter` is less than or equal to `block.timestamp`.
+     */
+    error ScheduledProtocolInvalidExecuteAfter(uint40 executeAfter);
+
+    /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
      */
     event PaymentCreated(

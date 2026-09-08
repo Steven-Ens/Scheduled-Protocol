@@ -149,4 +149,27 @@ contract CreatePaymentTest is Test {
 
         vm.stopPrank();
     }
+
+    function test_CreatePayment_RevertWhen_ExecuteAfterIsNotInFuture() public {
+        vm.startPrank(payer);
+
+        uint40 invalidExecuteAfter = uint40(block.timestamp);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IScheduledProtocol.ScheduledProtocolInvalidExecuteAfter.selector, invalidExecuteAfter
+            )
+        );
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            invalidExecuteAfter,
+            VALID_EXPIRES_AFTER,
+            ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
 }
