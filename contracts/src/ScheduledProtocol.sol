@@ -20,7 +20,6 @@ contract ScheduledProtocol is IScheduledProtocol {
         uint96 amount,
         RecurrenceType recurrence,
         uint40 executeAfter,
-
         uint24 expiresAfter,
         uint32 totalOccurrences
     ) external returns (uint256 paymentId) {
@@ -36,6 +35,10 @@ contract ScheduledProtocol is IScheduledProtocol {
         payment.totalOccurrences = totalOccurrences;
 
         _nextPaymentId++;
+
+        emit PaymentCreated(
+            paymentId, msg.sender, recipient, amount, recurrence, executeAfter, expiresAfter, totalOccurrences
+        );
     }
 
     /**

@@ -4,8 +4,8 @@ pragma solidity 0.8.35;
 
 import {Test} from "forge-std/Test.sol";
 
-import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
 import {IScheduledProtocol} from "../../src/interfaces/IScheduledProtocol.sol";
+import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
 
 contract CreatePaymentTest is Test {
     address private payer;
@@ -67,5 +67,26 @@ contract CreatePaymentTest is Test {
 
         assertEq(paymentIdOne, 0);
         assertEq(paymentIdTwo, 1);
+    }
+
+    function test_CreatePayment_EmitsPaymentCreated() public {
+        uint96 amount = 100e6;
+        IScheduledProtocol.RecurrenceType recurrence = IScheduledProtocol.RecurrenceType.None;
+        uint40 executeAfter = uint40(block.timestamp + 1 days);
+        uint24 expiresAfter = uint24(1 hours);
+        uint32 totalOccurrences = 1;
+
+        vm.startPrank(payer);
+
+        // Check the three indexed event topics and all non-indexed event data.
+        vm.expectEmit(true, true, true, true);
+
+        emit IScheduledProtocol.PaymentCreated(
+            0, payer, recipient, amount, recurrence, executeAfter, expiresAfter, totalOccurrences
+        );
+
+        scheduledProtocol.createPayment(recipient, amount, recurrence, executeAfter, expiresAfter, totalOccurrences);
+
+        vm.stopPrank();
     }
 }
