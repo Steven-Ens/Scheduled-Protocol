@@ -132,4 +132,21 @@ contract CreatePaymentTest is Test {
 
         vm.stopPrank();
     }
+
+    function test_CreatePayment_RevertWhen_AmountIsZero() public {
+        vm.startPrank(payer);
+
+        vm.expectRevert(abi.encodeWithSelector(IScheduledProtocol.ScheduledProtocolInvalidAmount.selector, 0));
+
+        scheduledProtocol.createPayment(
+            recipient,
+            0,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
 }

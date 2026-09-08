@@ -27,6 +27,10 @@ contract ScheduledProtocol is IScheduledProtocol {
             revert ScheduledProtocolInvalidRecipient(recipient);
         }
 
+        if (amount == 0) {
+            revert ScheduledProtocolInvalidAmount(amount);
+        }
+
         paymentId = _nextPaymentId;
         Payment storage payment = _payments[paymentId];
 

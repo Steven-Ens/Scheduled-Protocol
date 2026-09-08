@@ -57,6 +57,11 @@ interface IScheduledProtocol {
     error ScheduledProtocolInvalidRecipient(address recipient);
 
     /**
+     * @dev `amount` is zero.
+     */
+    error ScheduledProtocolInvalidAmount(uint96 amount);
+
+    /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
      */
     event PaymentCreated(
