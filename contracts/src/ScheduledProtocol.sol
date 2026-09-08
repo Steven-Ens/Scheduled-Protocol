@@ -35,7 +35,7 @@ contract ScheduledProtocol is IScheduledProtocol {
         payment.expiresAfter = expiresAfter;
         payment.totalOccurrences = totalOccurrences;
 
-        //_nextPaymentId++;
+        _nextPaymentId++;
     }
 
     /**

@@ -45,4 +45,27 @@ contract CreatePaymentTest is Test {
         assertEq(payment.lastExecutedOccurrencePlusOne, 0);
         assertFalse(payment.cancelled);
     }
+
+    function test_CreatePayment_AssignsSequentialPaymentIds() public {
+        vm.startPrank(payer);
+
+        uint256 paymentIdOne = scheduledProtocol.createPayment(
+            recipient,
+            100e6,
+            IScheduledProtocol.RecurrenceType.None,
+            // `block.timestamp + 1 days` is a uint256 expression, so it must be explicitly narrowed to uint40.
+            uint40(block.timestamp + 1 days),
+            1 hours,
+            1
+        );
+
+        uint256 paymentIdTwo = scheduledProtocol.createPayment(
+            recipient, 100e6, IScheduledProtocol.RecurrenceType.None, uint40(block.timestamp + 1 days), 1 hours, 1
+        );
+
+        vm.stopPrank();
+
+        assertEq(paymentIdOne, 0);
+        assertEq(paymentIdTwo, 1);
+    }
 }
