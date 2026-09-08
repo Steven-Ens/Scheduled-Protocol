@@ -37,6 +37,10 @@ contract ScheduledProtocol is IScheduledProtocol {
             revert ScheduledProtocolInvalidExecuteAfter(executeAfter);
         }
 
+        if (expiresAfter == 0) {
+            revert ScheduledProtocolInvalidExpiresAfter(expiresAfter);
+        }
+
         paymentId = _nextPaymentId;
         Payment storage payment = _payments[paymentId];
 

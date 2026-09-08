@@ -67,6 +67,11 @@ interface IScheduledProtocol {
     error ScheduledProtocolInvalidExecuteAfter(uint40 executeAfter);
 
     /**
+     * @dev `expiresAfter` is zero.
+     */
+    error ScheduledProtocolInvalidExpiresAfter(uint24 expiresAfter);
+
+    /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
      */
     event PaymentCreated(
