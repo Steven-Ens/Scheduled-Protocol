@@ -23,6 +23,8 @@ contract CreatePaymentTest is Test {
     function setUp() public {
         payer = makeAddr("payer");
         recipient = makeAddr("recipient");
+        // Safe because the test timestamp plus one day is well below `type(uint40).max`.
+        // forge-lint: disable-next-line(unsafe-typecast)
         executeAfter = uint40(block.timestamp + VALID_EXECUTE_AFTER_DELAY);
 
         scheduledProtocol = new ScheduledProtocol();
@@ -102,6 +104,25 @@ contract CreatePaymentTest is Test {
 
         scheduledProtocol.createPayment(
             recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_RevertWhen_RecipientIsZeroAddress() public {
+        vm.startPrank(payer);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IScheduledProtocol.ScheduledProtocolInvalidRecipient.selector, address(0))
+        );
+
+        scheduledProtocol.createPayment(
+            address(0),
             VALID_AMOUNT,
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,

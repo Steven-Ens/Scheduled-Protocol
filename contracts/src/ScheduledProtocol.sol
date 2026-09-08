@@ -23,6 +23,10 @@ contract ScheduledProtocol is IScheduledProtocol {
         uint24 expiresAfter,
         uint32 totalOccurrences
     ) external returns (uint256 paymentId) {
+        if (recipient == address(0)) {
+            revert ScheduledProtocolInvalidRecipient(recipient);
+        }
+
         paymentId = _nextPaymentId;
         Payment storage payment = _payments[paymentId];
 

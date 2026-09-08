@@ -51,7 +51,10 @@ interface IScheduledProtocol {
         bool cancelled;
     }
 
-    // Errors and add 'Require' statements in natspec related to errors
+    /**
+     * @dev `recipient` is the zero address.
+     */
+    error ScheduledProtocolInvalidRecipient(address recipient);
 
     /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
