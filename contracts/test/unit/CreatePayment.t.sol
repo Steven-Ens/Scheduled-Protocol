@@ -10,25 +10,34 @@ import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
 contract CreatePaymentTest is Test {
     address private payer;
     address private recipient;
+    uint40 private executeAfter;
+
     ScheduledProtocol private scheduledProtocol;
+
+    uint96 private constant VALID_AMOUNT = 100e6;
+    // Delay added to `block.timestamp` to produce a valid future `executeAfter`.
+    uint256 private constant VALID_EXECUTE_AFTER_DELAY = 1 days;
+    uint24 private constant VALID_EXPIRES_AFTER = 1 hours;
+    uint32 private constant ONE_TIME_TOTAL_OCCURRENCES = 1;
 
     function setUp() public {
         payer = makeAddr("payer");
         recipient = makeAddr("recipient");
+        executeAfter = uint40(block.timestamp + VALID_EXECUTE_AFTER_DELAY);
+
         scheduledProtocol = new ScheduledProtocol();
     }
 
     function test_CreatePayment() public {
-        uint96 amount = 100e6;
-        IScheduledProtocol.RecurrenceType recurrence = IScheduledProtocol.RecurrenceType.None;
-        uint40 executeAfter = uint40(block.timestamp + 1 days);
-        uint24 expiresAfter = uint24(1 hours);
-        uint32 totalOccurrences = 1;
-
         vm.startPrank(payer);
 
         uint256 paymentId = scheduledProtocol.createPayment(
-            recipient, amount, recurrence, executeAfter, expiresAfter, totalOccurrences
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            ONE_TIME_TOTAL_OCCURRENCES
         );
 
         IScheduledProtocol.Payment memory payment = scheduledProtocol.getPayment(paymentId);
@@ -37,11 +46,11 @@ contract CreatePaymentTest is Test {
 
         assertEq(payment.payer, payer);
         assertEq(payment.recipient, recipient);
-        assertEq(payment.amount, amount);
+        assertEq(payment.amount, VALID_AMOUNT);
         assertEq(uint8(payment.recurrence), uint8(IScheduledProtocol.RecurrenceType.None));
         assertEq(payment.executeAfter, executeAfter);
-        assertEq(payment.expiresAfter, expiresAfter);
-        assertEq(payment.totalOccurrences, totalOccurrences);
+        assertEq(payment.expiresAfter, VALID_EXPIRES_AFTER);
+        assertEq(payment.totalOccurrences, ONE_TIME_TOTAL_OCCURRENCES);
         assertEq(payment.lastExecutedOccurrencePlusOne, 0);
         assertFalse(payment.cancelled);
     }
@@ -51,16 +60,21 @@ contract CreatePaymentTest is Test {
 
         uint256 paymentIdOne = scheduledProtocol.createPayment(
             recipient,
-            100e6,
+            VALID_AMOUNT,
             IScheduledProtocol.RecurrenceType.None,
             // `block.timestamp + 1 days` is a uint256 expression, so it must be explicitly narrowed to uint40.
-            uint40(block.timestamp + 1 days),
-            1 hours,
-            1
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            ONE_TIME_TOTAL_OCCURRENCES
         );
 
         uint256 paymentIdTwo = scheduledProtocol.createPayment(
-            recipient, 100e6, IScheduledProtocol.RecurrenceType.None, uint40(block.timestamp + 1 days), 1 hours, 1
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            ONE_TIME_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -70,22 +84,30 @@ contract CreatePaymentTest is Test {
     }
 
     function test_CreatePayment_EmitsPaymentCreated() public {
-        uint96 amount = 100e6;
-        IScheduledProtocol.RecurrenceType recurrence = IScheduledProtocol.RecurrenceType.None;
-        uint40 executeAfter = uint40(block.timestamp + 1 days);
-        uint24 expiresAfter = uint24(1 hours);
-        uint32 totalOccurrences = 1;
-
         vm.startPrank(payer);
 
         // Check the three indexed event topics and all non-indexed event data.
         vm.expectEmit(true, true, true, true);
 
         emit IScheduledProtocol.PaymentCreated(
-            0, payer, recipient, amount, recurrence, executeAfter, expiresAfter, totalOccurrences
+            0,
+            payer,
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            ONE_TIME_TOTAL_OCCURRENCES
         );
 
-        scheduledProtocol.createPayment(recipient, amount, recurrence, executeAfter, expiresAfter, totalOccurrences);
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            ONE_TIME_TOTAL_OCCURRENCES
+        );
 
         vm.stopPrank();
     }
