@@ -156,7 +156,22 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
-    function test_CreatePayment_RevertWhen_ExecuteAfterEqualsPastBlockTimestamp() public {
+    function test_CreatePayment_WhenAmountIsMinimumValidValue() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            1,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_RevertWhen_ExecuteAfterIsPastBlockTimestamp() public {
         vm.startPrank(payer);
 
         uint40 invalidExecuteAfter = uint40(block.timestamp - 1);
@@ -202,6 +217,21 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
+    function test_CreatePayment_WhenExecuteAfterIsFutureBlockTimestamp() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            uint40(block.timestamp + 1),
+            VALID_EXPIRES_AFTER,
+            ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
     function test_CreatePayment_RevertWhen_ExpiresAfterIsZero() public {
         vm.startPrank(payer);
 
@@ -210,6 +240,16 @@ contract CreatePaymentTest is Test {
         scheduledProtocol.createPayment(
             recipient, VALID_AMOUNT, IScheduledProtocol.RecurrenceType.None, executeAfter, 0, ONE_TIME_TOTAL_OCCURRENCES
         );
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_WhenExpiresAfterIsMinimumValidValue() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient, VALID_AMOUNT, IScheduledProtocol.RecurrenceType.None, executeAfter, 1, ONE_TIME_TOTAL_OCCURRENCES
+        );
+
         vm.stopPrank();
     }
 
@@ -230,6 +270,16 @@ contract CreatePaymentTest is Test {
         scheduledProtocol.createPayment(
             recipient, VALID_AMOUNT, IScheduledProtocol.RecurrenceType.None, executeAfter, VALID_EXPIRES_AFTER, 0
         );
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_WhenNoneHasOneOccurrence() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient, VALID_AMOUNT, IScheduledProtocol.RecurrenceType.None, executeAfter, VALID_EXPIRES_AFTER, 1
+        );
+
         vm.stopPrank();
     }
 
@@ -303,6 +353,24 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
+    function test_CreatePayment_WhenRecurringHasMinimumOccurrences() public {
+        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = [
+            IScheduledProtocol.RecurrenceType.Daily,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            IScheduledProtocol.RecurrenceType.LastOfMonth
+        ];
+
+        vm.startPrank(payer);
+
+        for (uint8 i; i < recurringTypes.length; i++) {
+            scheduledProtocol.createPayment(
+                recipient, VALID_AMOUNT, recurringTypes[i], executeAfter, VALID_EXPIRES_AFTER, 2
+            );
+        }
+        vm.stopPrank();
+    }
+
     function test_CreatePayment_RevertWhen_OneTimeExecutionWindowIsTooLong() public {
         vm.startPrank(payer);
 
@@ -321,6 +389,21 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             ONE_TIME_MAX_EXPIRES_AFTER + 1,
+            ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_WhenOneTimeExecutionWindowIsMaximum() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            ONE_TIME_MAX_EXPIRES_AFTER,
             ONE_TIME_TOTAL_OCCURRENCES
         );
 
@@ -351,6 +434,21 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
+    function test_CreatePayment_WhenDailyExecutionWindowIsMaximum() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Daily,
+            executeAfter,
+            DAILY_MAX_EXPIRES_AFTER,
+            MULTIPLE_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
     function test_CreatePayment_RevertWhen_WeeklyExecutionWindowIsTooLong() public {
         vm.startPrank(payer);
 
@@ -369,6 +467,21 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.Weekly,
             executeAfter,
             WEEKLY_MAX_EXPIRES_AFTER + 1,
+            MULTIPLE_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_WhenWeeklyExecutionWindowIsMaximum() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            executeAfter,
+            WEEKLY_MAX_EXPIRES_AFTER,
             MULTIPLE_TOTAL_OCCURRENCES
         );
 
@@ -399,6 +512,21 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
+    function test_CreatePayment_WhenMonthlyExecutionWindowIsMaximum() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            executeAfter,
+            MONTHLY_MAX_EXPIRES_AFTER,
+            MULTIPLE_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
     function test_CreatePayment_RevertWhen_LastOfMonthExecutionWindowIsTooLong() public {
         vm.startPrank(payer);
 
@@ -417,6 +545,21 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.LastOfMonth,
             executeAfter,
             LAST_OF_MONTH_MAX_EXPIRES_AFTER + 1,
+            MULTIPLE_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_WhenLastOfMonthExecutionWindowIsMaximum() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.LastOfMonth,
+            executeAfter,
+            LAST_OF_MONTH_MAX_EXPIRES_AFTER,
             MULTIPLE_TOTAL_OCCURRENCES
         );
 
