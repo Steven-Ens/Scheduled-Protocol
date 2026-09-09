@@ -21,6 +21,7 @@ contract CreatePaymentTest is Test {
     uint32 private constant ONE_TIME_TOTAL_OCCURRENCES = 1;
     uint32 private constant MULTIPLE_TOTAL_OCCURRENCES = 2;
 
+    uint24 private constant ONE_TIME_MAX_EXPIRES_AFTER = 28 days;
     uint24 private constant DAILY_MAX_EXPIRES_AFTER = 1 days;
     uint24 private constant WEEKLY_MAX_EXPIRES_AFTER = 1 weeks;
     uint24 private constant MONTHLY_MAX_EXPIRES_AFTER = 28 days;
@@ -276,6 +277,30 @@ contract CreatePaymentTest is Test {
                 recipient, VALID_AMOUNT, recurringTypes[i], executeAfter, VALID_EXPIRES_AFTER, 1
             );
         }
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_RevertWhen_OneTimeExecutionWindowIsTooLong() public {
+        vm.startPrank(payer);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IScheduledProtocol.ScheduledProtocolExecutionWindowTooLong.selector,
+                IScheduledProtocol.RecurrenceType.None,
+                ONE_TIME_MAX_EXPIRES_AFTER + 1,
+                ONE_TIME_MAX_EXPIRES_AFTER
+            )
+        );
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            ONE_TIME_MAX_EXPIRES_AFTER + 1,
+            ONE_TIME_TOTAL_OCCURRENCES
+        );
+
         vm.stopPrank();
     }
 

@@ -55,7 +55,9 @@ contract ScheduledProtocol is IScheduledProtocol {
         }
 
         uint24 maxExpiresAfter;
-        if (recurrence == RecurrenceType.Daily) {
+        if (recurrence == RecurrenceType.None) {
+            maxExpiresAfter = 28 days;
+        } else if (recurrence == RecurrenceType.Daily) {
             maxExpiresAfter = 1 days;
         } else if (recurrence == RecurrenceType.Weekly) {
             maxExpiresAfter = 1 weeks;
@@ -64,7 +66,7 @@ contract ScheduledProtocol is IScheduledProtocol {
         }
 
         // Only recurring schedules require a maximum execution window to prevent overlap with the next occurrence.
-        if (recurrence != RecurrenceType.None && expiresAfter > maxExpiresAfter) {
+        if (expiresAfter > maxExpiresAfter) {
             revert ScheduledProtocolExecutionWindowTooLong(recurrence, expiresAfter, maxExpiresAfter);
         }
 
