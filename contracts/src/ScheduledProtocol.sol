@@ -10,6 +10,7 @@ import {IScheduledProtocol} from "./interfaces/IScheduledProtocol.sol";
 contract ScheduledProtocol is IScheduledProtocol {
     uint256 private _nextPaymentId;
     uint256 private _accumulatedProtocolFees;
+
     mapping(uint256 paymentId => Payment payment) private _payments;
 
     /**
@@ -39,6 +40,18 @@ contract ScheduledProtocol is IScheduledProtocol {
 
         if (expiresAfter == 0) {
             revert ScheduledProtocolInvalidExpiresAfter(expiresAfter);
+        }
+
+        if (recurrence == RecurrenceType.None) {
+            if (totalOccurrences != 1) {
+                revert ScheduledProtocolInvalidTotalOccurrences(recurrence, totalOccurrences);
+            }
+            // Solidity's ABI decoder guarantees `recurrence` is a valid enum value, so any value other than `None` is a
+            // recurring type.
+        } else {
+            if (totalOccurrences <= 1) {
+                revert ScheduledProtocolInvalidTotalOccurrences(recurrence, totalOccurrences);
+            }
         }
 
         paymentId = _nextPaymentId;

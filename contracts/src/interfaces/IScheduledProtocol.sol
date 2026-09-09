@@ -72,6 +72,11 @@ interface IScheduledProtocol {
     error ScheduledProtocolInvalidExpiresAfter(uint24 expiresAfter);
 
     /**
+     * @dev `totalOccurrences` is invalid for the selected `recurrence`.
+     */
+    error ScheduledProtocolInvalidTotalOccurrences(RecurrenceType recurrence, uint32 totalOccurrences);
+
+    /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
      */
     event PaymentCreated(

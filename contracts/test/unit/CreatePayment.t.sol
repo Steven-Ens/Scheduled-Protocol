@@ -183,4 +183,89 @@ contract CreatePaymentTest is Test {
         );
         vm.stopPrank();
     }
+
+    // `RecurrenceType` bounds are enforced by Solidity's ABI decoder. These tests cover valid enum values and their
+    // protocol-specific constraints.
+
+    function test_CreatePayment_RevertWhen_NoneHasZeroOccurrences() public {
+        vm.startPrank(payer);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IScheduledProtocol.ScheduledProtocolInvalidTotalOccurrences.selector,
+                IScheduledProtocol.RecurrenceType.None,
+                0
+            )
+        );
+
+        scheduledProtocol.createPayment(
+            recipient, VALID_AMOUNT, IScheduledProtocol.RecurrenceType.None, executeAfter, VALID_EXPIRES_AFTER, 0
+        );
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_RevertWhen_NoneHasMultipleOccurrences() public {
+        vm.startPrank(payer);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IScheduledProtocol.ScheduledProtocolInvalidTotalOccurrences.selector,
+                IScheduledProtocol.RecurrenceType.None,
+                2
+            )
+        );
+
+        scheduledProtocol.createPayment(
+            recipient, VALID_AMOUNT, IScheduledProtocol.RecurrenceType.None, executeAfter, VALID_EXPIRES_AFTER, 2
+        );
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_RevertWhen_RecurringHasZeroOccurrences() public {
+        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = [
+            IScheduledProtocol.RecurrenceType.Daily,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            IScheduledProtocol.RecurrenceType.LastOfMonth
+        ];
+
+        vm.startPrank(payer);
+
+        for (uint8 i; i < recurringTypes.length; i++) {
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IScheduledProtocol.ScheduledProtocolInvalidTotalOccurrences.selector, recurringTypes[i], 0
+                )
+            );
+
+            scheduledProtocol.createPayment(
+                recipient, VALID_AMOUNT, recurringTypes[i], executeAfter, VALID_EXPIRES_AFTER, 0
+            );
+        }
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_RevertWhen_RecurringHasOneOccurrence() public {
+        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = [
+            IScheduledProtocol.RecurrenceType.Daily,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            IScheduledProtocol.RecurrenceType.LastOfMonth
+        ];
+
+        vm.startPrank(payer);
+
+        for (uint8 i; i < recurringTypes.length; i++) {
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IScheduledProtocol.ScheduledProtocolInvalidTotalOccurrences.selector, recurringTypes[i], 1
+                )
+            );
+
+            scheduledProtocol.createPayment(
+                recipient, VALID_AMOUNT, recurringTypes[i], executeAfter, VALID_EXPIRES_AFTER, 1
+            );
+        }
+        vm.stopPrank();
+    }
 }
