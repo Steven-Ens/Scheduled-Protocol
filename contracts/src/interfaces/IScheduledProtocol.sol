@@ -77,6 +77,13 @@ interface IScheduledProtocol {
     error ScheduledProtocolInvalidTotalOccurrences(RecurrenceType recurrence, uint32 totalOccurrences);
 
     /**
+     * @dev `expiresAfter` exceeds the maximum allowed for the selected `recurrence`.
+     */
+    error ScheduledProtocolExecutionWindowTooLong(
+        RecurrenceType recurrence, uint24 expiresAfter, uint24 maxExpiresAfter
+    );
+
+    /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
      */
     event PaymentCreated(

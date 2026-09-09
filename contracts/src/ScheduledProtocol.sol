@@ -23,7 +23,7 @@ contract ScheduledProtocol is IScheduledProtocol {
         uint40 executeAfter,
         uint24 expiresAfter,
         uint32 totalOccurrences
-    ) external returns (uint256 paymentId) {
+    ) external override returns (uint256 paymentId) {
         if (recipient == address(0)) {
             revert ScheduledProtocolInvalidRecipient(recipient);
         }
@@ -42,16 +42,30 @@ contract ScheduledProtocol is IScheduledProtocol {
             revert ScheduledProtocolInvalidExpiresAfter(expiresAfter);
         }
 
+        // Solidity's ABI decoder guarantees `recurrence` is a valid enum value, so any value other than `None` is a
+        // recurring type.
         if (recurrence == RecurrenceType.None) {
             if (totalOccurrences != 1) {
                 revert ScheduledProtocolInvalidTotalOccurrences(recurrence, totalOccurrences);
             }
-            // Solidity's ABI decoder guarantees `recurrence` is a valid enum value, so any value other than `None` is a
-            // recurring type.
         } else {
             if (totalOccurrences <= 1) {
                 revert ScheduledProtocolInvalidTotalOccurrences(recurrence, totalOccurrences);
             }
+        }
+
+        uint24 maxExpiresAfter;
+        if (recurrence == RecurrenceType.Daily) {
+            maxExpiresAfter = 1 days;
+        } else if (recurrence == RecurrenceType.Weekly) {
+            maxExpiresAfter = 1 weeks;
+        } else if (recurrence == RecurrenceType.Monthly || recurrence == RecurrenceType.LastOfMonth) {
+            maxExpiresAfter = 28 days;
+        }
+
+        // Only recurring schedules require a maximum execution window to prevent overlap with the next occurrence.
+        if (recurrence != RecurrenceType.None && expiresAfter > maxExpiresAfter) {
+            revert ScheduledProtocolExecutionWindowTooLong(recurrence, expiresAfter, maxExpiresAfter);
         }
 
         paymentId = _nextPaymentId;
