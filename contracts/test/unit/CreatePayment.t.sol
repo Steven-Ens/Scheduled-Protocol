@@ -18,8 +18,13 @@ contract CreatePaymentTest is Test {
     // Delay added to `block.timestamp` to produce a valid future `executeAfter`.
     uint256 private constant VALID_EXECUTE_AFTER_DELAY = 1 days;
     uint24 private constant VALID_EXPIRES_AFTER = 1 hours;
+
+    uint96 private constant MIN_VALID_AMOUNT = 1;
+    uint256 private constant MIN_VALID_EXECUTE_AFTER_DELAY = 1 seconds;
+    uint24 private constant MIN_VALID_EXPIRES_AFTER = 1;
+
     uint32 private constant ONE_TIME_TOTAL_OCCURRENCES = 1;
-    uint32 private constant MULTIPLE_TOTAL_OCCURRENCES = 2;
+    uint32 private constant MIN_RECURRING_TOTAL_OCCURRENCES = 2;
 
     uint24 private constant ONE_TIME_MAX_EXPIRES_AFTER = 28 days;
     uint24 private constant DAILY_MAX_EXPIRES_AFTER = 1 days;
@@ -94,8 +99,8 @@ contract CreatePaymentTest is Test {
     function test_CreatePayment_EmitsPaymentCreated() public {
         vm.startPrank(payer);
 
-        // Check the three indexed event topics and all non-indexed event data.
-        vm.expectEmit(true, true, true, true);
+        // Check all indexed topics, event data, and the emitting contract.
+        vm.expectEmit(true, true, true, true, address(scheduledProtocol));
 
         emit IScheduledProtocol.PaymentCreated(
             0,
@@ -161,7 +166,7 @@ contract CreatePaymentTest is Test {
 
         scheduledProtocol.createPayment(
             recipient,
-            1,
+            MIN_VALID_AMOUNT,
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             VALID_EXPIRES_AFTER,
@@ -171,7 +176,7 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
-    function test_CreatePayment_RevertWhen_ExecuteAfterIsPastBlockTimestamp() public {
+    function test_CreatePayment_RevertWhen_ExecuteAfterIsOneSecondInPast() public {
         vm.startPrank(payer);
 
         uint40 invalidExecuteAfter = uint40(block.timestamp - 1);
@@ -217,14 +222,16 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
-    function test_CreatePayment_WhenExecuteAfterIsFutureBlockTimestamp() public {
+    function test_CreatePayment_WhenExecuteAfterIsOneSecondInFuture() public {
         vm.startPrank(payer);
 
         scheduledProtocol.createPayment(
             recipient,
             VALID_AMOUNT,
             IScheduledProtocol.RecurrenceType.None,
-            uint40(block.timestamp + 1),
+            // Safe because the test timestamp plus one is well below `type(uint40).max`.
+            // forge-lint: disable-next-line(unsafe-typecast)
+            uint40(block.timestamp + MIN_VALID_EXECUTE_AFTER_DELAY),
             VALID_EXPIRES_AFTER,
             ONE_TIME_TOTAL_OCCURRENCES
         );
@@ -247,7 +254,12 @@ contract CreatePaymentTest is Test {
         vm.startPrank(payer);
 
         scheduledProtocol.createPayment(
-            recipient, VALID_AMOUNT, IScheduledProtocol.RecurrenceType.None, executeAfter, 1, ONE_TIME_TOTAL_OCCURRENCES
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            MIN_VALID_EXPIRES_AFTER,
+            ONE_TIME_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -256,7 +268,7 @@ contract CreatePaymentTest is Test {
     // `RecurrenceType` bounds are enforced by Solidity's ABI decoder. These tests cover valid enum values and their
     // protocol-specific constraints.
 
-    function test_CreatePayment_RevertWhen_NoneHasZeroOccurrences() public {
+    function test_CreatePayment_RevertWhen_NoneHasZeroTotalOccurrences() public {
         vm.startPrank(payer);
 
         vm.expectRevert(
@@ -273,24 +285,29 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
-    function test_CreatePayment_WhenNoneHasOneOccurrence() public {
+    function test_CreatePayment_WhenNoneHasOneTotalOccurrence() public {
         vm.startPrank(payer);
 
         scheduledProtocol.createPayment(
-            recipient, VALID_AMOUNT, IScheduledProtocol.RecurrenceType.None, executeAfter, VALID_EXPIRES_AFTER, 1
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            ONE_TIME_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
     }
 
-    function test_CreatePayment_RevertWhen_NoneHasMultipleOccurrences() public {
+    function test_CreatePayment_RevertWhen_NoneHasMultipleTotalOccurrences() public {
         vm.startPrank(payer);
 
         vm.expectRevert(
             abi.encodeWithSelector(
                 IScheduledProtocol.ScheduledProtocolInvalidTotalOccurrences.selector,
                 IScheduledProtocol.RecurrenceType.None,
-                MULTIPLE_TOTAL_OCCURRENCES
+                MIN_RECURRING_TOTAL_OCCURRENCES
             )
         );
 
@@ -300,22 +317,17 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             VALID_EXPIRES_AFTER,
-            MULTIPLE_TOTAL_OCCURRENCES
+            MIN_RECURRING_TOTAL_OCCURRENCES
         );
         vm.stopPrank();
     }
 
-    function test_CreatePayment_RevertWhen_RecurringHasZeroOccurrences() public {
-        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = [
-            IScheduledProtocol.RecurrenceType.Daily,
-            IScheduledProtocol.RecurrenceType.Weekly,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            IScheduledProtocol.RecurrenceType.LastOfMonth
-        ];
+    function test_CreatePayment_RevertWhen_RecurringHasZeroTotalOccurrences() public {
+        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
 
         vm.startPrank(payer);
 
-        for (uint8 i; i < recurringTypes.length; i++) {
+        for (uint256 i; i < recurringTypes.length; ++i) {
             vm.expectRevert(
                 abi.encodeWithSelector(
                     IScheduledProtocol.ScheduledProtocolInvalidTotalOccurrences.selector, recurringTypes[i], 0
@@ -329,43 +341,45 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
-    function test_CreatePayment_RevertWhen_RecurringHasOneOccurrence() public {
-        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = [
-            IScheduledProtocol.RecurrenceType.Daily,
-            IScheduledProtocol.RecurrenceType.Weekly,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            IScheduledProtocol.RecurrenceType.LastOfMonth
-        ];
+    function test_CreatePayment_RevertWhen_RecurringHasOneTotalOccurrence() public {
+        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
 
         vm.startPrank(payer);
 
-        for (uint8 i; i < recurringTypes.length; i++) {
+        for (uint256 i; i < recurringTypes.length; ++i) {
             vm.expectRevert(
                 abi.encodeWithSelector(
-                    IScheduledProtocol.ScheduledProtocolInvalidTotalOccurrences.selector, recurringTypes[i], 1
+                    IScheduledProtocol.ScheduledProtocolInvalidTotalOccurrences.selector,
+                    recurringTypes[i],
+                    ONE_TIME_TOTAL_OCCURRENCES
                 )
             );
 
             scheduledProtocol.createPayment(
-                recipient, VALID_AMOUNT, recurringTypes[i], executeAfter, VALID_EXPIRES_AFTER, 1
+                recipient,
+                VALID_AMOUNT,
+                recurringTypes[i],
+                executeAfter,
+                VALID_EXPIRES_AFTER,
+                ONE_TIME_TOTAL_OCCURRENCES
             );
         }
         vm.stopPrank();
     }
 
-    function test_CreatePayment_WhenRecurringHasMinimumOccurrences() public {
-        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = [
-            IScheduledProtocol.RecurrenceType.Daily,
-            IScheduledProtocol.RecurrenceType.Weekly,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            IScheduledProtocol.RecurrenceType.LastOfMonth
-        ];
+    function test_CreatePayment_WhenRecurringHasMinimumTotalOccurrences() public {
+        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
 
         vm.startPrank(payer);
 
-        for (uint8 i; i < recurringTypes.length; i++) {
+        for (uint256 i; i < recurringTypes.length; ++i) {
             scheduledProtocol.createPayment(
-                recipient, VALID_AMOUNT, recurringTypes[i], executeAfter, VALID_EXPIRES_AFTER, 2
+                recipient,
+                VALID_AMOUNT,
+                recurringTypes[i],
+                executeAfter,
+                VALID_EXPIRES_AFTER,
+                MIN_RECURRING_TOTAL_OCCURRENCES
             );
         }
         vm.stopPrank();
@@ -428,7 +442,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.Daily,
             executeAfter,
             DAILY_MAX_EXPIRES_AFTER + 1,
-            MULTIPLE_TOTAL_OCCURRENCES
+            MIN_RECURRING_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -443,7 +457,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.Daily,
             executeAfter,
             DAILY_MAX_EXPIRES_AFTER,
-            MULTIPLE_TOTAL_OCCURRENCES
+            MIN_RECURRING_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -467,7 +481,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.Weekly,
             executeAfter,
             WEEKLY_MAX_EXPIRES_AFTER + 1,
-            MULTIPLE_TOTAL_OCCURRENCES
+            MIN_RECURRING_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -482,7 +496,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.Weekly,
             executeAfter,
             WEEKLY_MAX_EXPIRES_AFTER,
-            MULTIPLE_TOTAL_OCCURRENCES
+            MIN_RECURRING_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -506,7 +520,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.Monthly,
             executeAfter,
             MONTHLY_MAX_EXPIRES_AFTER + 1,
-            MULTIPLE_TOTAL_OCCURRENCES
+            MIN_RECURRING_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -521,7 +535,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.Monthly,
             executeAfter,
             MONTHLY_MAX_EXPIRES_AFTER,
-            MULTIPLE_TOTAL_OCCURRENCES
+            MIN_RECURRING_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -545,7 +559,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.LastOfMonth,
             executeAfter,
             LAST_OF_MONTH_MAX_EXPIRES_AFTER + 1,
-            MULTIPLE_TOTAL_OCCURRENCES
+            MIN_RECURRING_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -560,9 +574,19 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.LastOfMonth,
             executeAfter,
             LAST_OF_MONTH_MAX_EXPIRES_AFTER,
-            MULTIPLE_TOTAL_OCCURRENCES
+            MIN_RECURRING_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
+    }
+
+    // Helper
+    function _recurringTypes() private pure returns (IScheduledProtocol.RecurrenceType[4] memory recurringTypes) {
+        recurringTypes = [
+            IScheduledProtocol.RecurrenceType.Daily,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            IScheduledProtocol.RecurrenceType.LastOfMonth
+        ];
     }
 }

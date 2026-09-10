@@ -65,7 +65,7 @@ contract ScheduledProtocol is IScheduledProtocol {
             maxExpiresAfter = 28 days;
         }
 
-        // Only recurring schedules require a maximum execution window to prevent overlap with the next occurrence.
+        // Enforce the maximum execution window for the selected recurrence type.
         if (expiresAfter > maxExpiresAfter) {
             revert ScheduledProtocolExecutionWindowTooLong(recurrence, expiresAfter, maxExpiresAfter);
         }
