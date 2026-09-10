@@ -61,6 +61,7 @@ contract CreatePaymentTest is Test {
 
         vm.stopPrank();
 
+        // Confirm msg.sender is stored.
         assertEq(payment.payer, payer);
         assertEq(payment.recipient, recipient);
         assertEq(payment.amount, VALID_AMOUNT);
@@ -200,9 +201,9 @@ contract CreatePaymentTest is Test {
     }
 
     function test_CreatePayment_RevertWhen_ExecuteAfterIsOneSecondInPast() public {
-        vm.startPrank(payer);
-
         uint40 invalidPastExecuteAfter = uint40(block.timestamp - 1);
+
+        vm.startPrank(payer);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -223,9 +224,9 @@ contract CreatePaymentTest is Test {
     }
 
     function test_CreatePayment_RevertWhen_ExecuteAfterEqualsBlockTimestamp() public {
-        vm.startPrank(payer);
-
         uint40 invalidCurrentExecuteAfter = uint40(block.timestamp);
+
+        vm.startPrank(payer);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -246,15 +247,17 @@ contract CreatePaymentTest is Test {
     }
 
     function test_CreatePayment_SuccessWhen_ExecuteAfterIsMinimumValidValue() public {
+        // Safe because the test timestamp plus one second is well below `type(uint40).max`.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint40 minValidExecuteAfter = uint40(block.timestamp + MIN_VALID_EXECUTE_AFTER_DELAY);
+
         vm.startPrank(payer);
 
         scheduledProtocol.createPayment(
             recipient,
             VALID_AMOUNT,
             IScheduledProtocol.RecurrenceType.None,
-            // Safe because the test timestamp plus one second is well below `type(uint40).max`.
-            // forge-lint: disable-next-line(unsafe-typecast)
-            uint40(block.timestamp + MIN_VALID_EXECUTE_AFTER_DELAY),
+            minValidExecuteAfter,
             VALID_EXPIRES_AFTER,
             VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
@@ -294,6 +297,7 @@ contract CreatePaymentTest is Test {
             0,
             VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
+
         vm.stopPrank();
     }
 
@@ -523,6 +527,7 @@ contract CreatePaymentTest is Test {
         scheduledProtocol.createPayment(
             recipient, VALID_AMOUNT, IScheduledProtocol.RecurrenceType.None, executeAfter, VALID_EXPIRES_AFTER, 0
         );
+
         vm.stopPrank();
     }
 
@@ -548,18 +553,14 @@ contract CreatePaymentTest is Test {
             abi.encodeWithSelector(
                 IScheduledProtocol.ScheduledProtocolInvalidTotalOccurrences.selector,
                 IScheduledProtocol.RecurrenceType.None,
-                VALID_RECURRING_TOTAL_OCCURRENCES
+                2
             )
         );
 
         scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
+            recipient, VALID_AMOUNT, IScheduledProtocol.RecurrenceType.None, executeAfter, VALID_EXPIRES_AFTER, 2
         );
+
         vm.stopPrank();
     }
 
@@ -579,6 +580,7 @@ contract CreatePaymentTest is Test {
                 recipient, VALID_AMOUNT, recurringTypes[i], executeAfter, VALID_EXPIRES_AFTER, 0
             );
         }
+
         vm.stopPrank();
     }
 
@@ -598,6 +600,7 @@ contract CreatePaymentTest is Test {
                 recipient, VALID_AMOUNT, recurringTypes[i], executeAfter, VALID_EXPIRES_AFTER, 1
             );
         }
+
         vm.stopPrank();
     }
 
@@ -616,6 +619,7 @@ contract CreatePaymentTest is Test {
                 MIN_VALID_RECURRING_TOTAL_OCCURRENCES
             );
         }
+
         vm.stopPrank();
     }
 
