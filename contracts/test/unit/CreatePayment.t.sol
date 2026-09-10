@@ -229,7 +229,7 @@ contract CreatePaymentTest is Test {
             recipient,
             VALID_AMOUNT,
             IScheduledProtocol.RecurrenceType.None,
-            // Safe because the test timestamp plus one is well below `type(uint40).max`.
+            // Safe because the test timestamp plus one second is well below `type(uint40).max`.
             // forge-lint: disable-next-line(unsafe-typecast)
             uint40(block.timestamp + MIN_VALID_EXECUTE_AFTER_DELAY),
             VALID_EXPIRES_AFTER,
@@ -580,7 +580,6 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
-    // Helper
     function _recurringTypes() private pure returns (IScheduledProtocol.RecurrenceType[4] memory recurringTypes) {
         recurringTypes = [
             IScheduledProtocol.RecurrenceType.Daily,
