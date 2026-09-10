@@ -14,23 +14,26 @@ contract CreatePaymentTest is Test {
 
     ScheduledProtocol private scheduledProtocol;
 
+    uint96 private constant MIN_VALID_AMOUNT = 1;
+    uint256 private constant MIN_VALID_EXECUTE_AFTER_DELAY = 1 seconds;
+    uint24 private constant MIN_VALID_EXPIRES_AFTER = 1 seconds;
+    uint32 private constant MIN_VALID_RECURRING_TOTAL_OCCURRENCES = 2;
+
     uint96 private constant VALID_AMOUNT = 100e6;
     // Delay added to `block.timestamp` to produce a valid future `executeAfter`.
     uint256 private constant VALID_EXECUTE_AFTER_DELAY = 1 days;
     uint24 private constant VALID_EXPIRES_AFTER = 1 hours;
+    uint32 private constant VALID_ONE_TIME_TOTAL_OCCURRENCES = 1;
+    uint32 private constant VALID_RECURRING_TOTAL_OCCURRENCES = 10;
 
-    uint96 private constant MIN_VALID_AMOUNT = 1;
-    uint256 private constant MIN_VALID_EXECUTE_AFTER_DELAY = 1 seconds;
-    uint24 private constant MIN_VALID_EXPIRES_AFTER = 1;
-
-    uint32 private constant ONE_TIME_TOTAL_OCCURRENCES = 1;
-    uint32 private constant MIN_RECURRING_TOTAL_OCCURRENCES = 2;
-
-    uint24 private constant ONE_TIME_MAX_EXPIRES_AFTER = 28 days;
-    uint24 private constant DAILY_MAX_EXPIRES_AFTER = 1 days;
-    uint24 private constant WEEKLY_MAX_EXPIRES_AFTER = 1 weeks;
-    uint24 private constant MONTHLY_MAX_EXPIRES_AFTER = 28 days;
-    uint24 private constant LAST_OF_MONTH_MAX_EXPIRES_AFTER = 28 days;
+    uint96 private constant MAX_VALID_AMOUNT = type(uint96).max;
+    uint40 private constant MAX_VALID_EXECUTE_AFTER = type(uint40).max;
+    uint24 private constant MAX_VALID_ONE_TIME_EXPIRES_AFTER = 28 days;
+    uint24 private constant MAX_VALID_DAILY_EXPIRES_AFTER = 1 days;
+    uint24 private constant MAX_VALID_WEEKLY_EXPIRES_AFTER = 1 weeks;
+    uint24 private constant MAX_VALID_MONTHLY_EXPIRES_AFTER = 28 days;
+    uint24 private constant MAX_VALID_LAST_OF_MONTH_EXPIRES_AFTER = 28 days;
+    uint32 private constant MAX_VALID_RECURRING_TOTAL_OCCURRENCES = type(uint32).max;
 
     function setUp() public {
         payer = makeAddr("payer");
@@ -42,7 +45,7 @@ contract CreatePaymentTest is Test {
         scheduledProtocol = new ScheduledProtocol();
     }
 
-    function test_CreatePayment_StoresPaymentSchedule() public {
+    function test_CreatePayment_SuccessWhen_StoresPaymentSchedule() public {
         vm.startPrank(payer);
 
         uint256 paymentId = scheduledProtocol.createPayment(
@@ -51,7 +54,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             VALID_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
         IScheduledProtocol.Payment memory payment = scheduledProtocol.getPayment(paymentId);
@@ -64,12 +67,13 @@ contract CreatePaymentTest is Test {
         assertEq(uint8(payment.recurrence), uint8(IScheduledProtocol.RecurrenceType.None));
         assertEq(payment.executeAfter, executeAfter);
         assertEq(payment.expiresAfter, VALID_EXPIRES_AFTER);
-        assertEq(payment.totalOccurrences, ONE_TIME_TOTAL_OCCURRENCES);
+        assertEq(payment.totalOccurrences, VALID_ONE_TIME_TOTAL_OCCURRENCES);
+        // Confirm default type values for mutable state.
         assertEq(payment.lastExecutedOccurrencePlusOne, 0);
         assertFalse(payment.cancelled);
     }
 
-    function test_CreatePayment_AssignsSequentialPaymentIds() public {
+    function test_CreatePayment_SuccessWhen_AssignsSequentialPaymentIds() public {
         vm.startPrank(payer);
 
         uint256 paymentIdOne = scheduledProtocol.createPayment(
@@ -78,7 +82,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             VALID_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
         uint256 paymentIdTwo = scheduledProtocol.createPayment(
@@ -87,7 +91,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             VALID_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -96,7 +100,7 @@ contract CreatePaymentTest is Test {
         assertEq(paymentIdTwo, 1);
     }
 
-    function test_CreatePayment_EmitsPaymentCreated() public {
+    function test_CreatePayment_SuccessWhen_EmitsPaymentCreated() public {
         vm.startPrank(payer);
 
         // Check all indexed topics, event data, and the emitting contract.
@@ -110,7 +114,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             VALID_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
         scheduledProtocol.createPayment(
@@ -119,7 +123,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             VALID_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -138,7 +142,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             VALID_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -155,13 +159,13 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             VALID_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
     }
 
-    function test_CreatePayment_WhenAmountIsMinimumValidValue() public {
+    function test_CreatePayment_SuccessWhen_AmountIsMinimumValidValue() public {
         vm.startPrank(payer);
 
         scheduledProtocol.createPayment(
@@ -170,20 +174,39 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             VALID_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
     }
 
+    function test_CreatePayment_SuccessWhen_AmountIsMaximumValidValue() public {
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            MAX_VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        IScheduledProtocol.Payment memory payment = scheduledProtocol.getPayment(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(payment.amount, MAX_VALID_AMOUNT);
+    }
+
     function test_CreatePayment_RevertWhen_ExecuteAfterIsOneSecondInPast() public {
         vm.startPrank(payer);
 
-        uint40 invalidExecuteAfter = uint40(block.timestamp - 1);
+        uint40 invalidPastExecuteAfter = uint40(block.timestamp - 1);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IScheduledProtocol.ScheduledProtocolInvalidExecuteAfter.selector, invalidExecuteAfter
+                IScheduledProtocol.ScheduledProtocolInvalidExecuteAfter.selector, invalidPastExecuteAfter
             )
         );
 
@@ -191,9 +214,9 @@ contract CreatePaymentTest is Test {
             recipient,
             VALID_AMOUNT,
             IScheduledProtocol.RecurrenceType.None,
-            invalidExecuteAfter,
+            invalidPastExecuteAfter,
             VALID_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -202,11 +225,11 @@ contract CreatePaymentTest is Test {
     function test_CreatePayment_RevertWhen_ExecuteAfterEqualsBlockTimestamp() public {
         vm.startPrank(payer);
 
-        uint40 invalidExecuteAfter = uint40(block.timestamp);
+        uint40 invalidCurrentExecuteAfter = uint40(block.timestamp);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IScheduledProtocol.ScheduledProtocolInvalidExecuteAfter.selector, invalidExecuteAfter
+                IScheduledProtocol.ScheduledProtocolInvalidExecuteAfter.selector, invalidCurrentExecuteAfter
             )
         );
 
@@ -214,15 +237,15 @@ contract CreatePaymentTest is Test {
             recipient,
             VALID_AMOUNT,
             IScheduledProtocol.RecurrenceType.None,
-            invalidExecuteAfter,
+            invalidCurrentExecuteAfter,
             VALID_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
     }
 
-    function test_CreatePayment_WhenExecuteAfterIsOneSecondInFuture() public {
+    function test_CreatePayment_SuccessWhen_ExecuteAfterIsMinimumValidValue() public {
         vm.startPrank(payer);
 
         scheduledProtocol.createPayment(
@@ -233,10 +256,29 @@ contract CreatePaymentTest is Test {
             // forge-lint: disable-next-line(unsafe-typecast)
             uint40(block.timestamp + MIN_VALID_EXECUTE_AFTER_DELAY),
             VALID_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
+    }
+
+    function test_CreatePayment_SuccessWhen_ExecuteAfterIsMaximumValidValue() public {
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            MAX_VALID_EXECUTE_AFTER,
+            VALID_EXPIRES_AFTER,
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        IScheduledProtocol.Payment memory payment = scheduledProtocol.getPayment(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(payment.executeAfter, MAX_VALID_EXECUTE_AFTER);
     }
 
     function test_CreatePayment_RevertWhen_ExpiresAfterIsZero() public {
@@ -245,12 +287,17 @@ contract CreatePaymentTest is Test {
         vm.expectRevert(abi.encodeWithSelector(IScheduledProtocol.ScheduledProtocolInvalidExpiresAfter.selector, 0));
 
         scheduledProtocol.createPayment(
-            recipient, VALID_AMOUNT, IScheduledProtocol.RecurrenceType.None, executeAfter, 0, ONE_TIME_TOTAL_OCCURRENCES
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            0,
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
         vm.stopPrank();
     }
 
-    function test_CreatePayment_WhenExpiresAfterIsMinimumValidValue() public {
+    function test_CreatePayment_SuccessWhen_ExpiresAfterIsMinimumValidValue() public {
         vm.startPrank(payer);
 
         scheduledProtocol.createPayment(
@@ -259,7 +306,202 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             MIN_VALID_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_SuccessWhen_OneTimeExecutionWindowIsMaximumValidValue() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            MAX_VALID_ONE_TIME_EXPIRES_AFTER,
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_RevertWhen_OneTimeExecutionWindowIsTooLong() public {
+        vm.startPrank(payer);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IScheduledProtocol.ScheduledProtocolExecutionWindowTooLong.selector,
+                IScheduledProtocol.RecurrenceType.None,
+                MAX_VALID_ONE_TIME_EXPIRES_AFTER + 1,
+                MAX_VALID_ONE_TIME_EXPIRES_AFTER
+            )
+        );
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            MAX_VALID_ONE_TIME_EXPIRES_AFTER + 1,
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_SuccessWhen_DailyExecutionWindowIsMaximumValidValue() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Daily,
+            executeAfter,
+            MAX_VALID_DAILY_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_RevertWhen_DailyExecutionWindowIsTooLong() public {
+        vm.startPrank(payer);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IScheduledProtocol.ScheduledProtocolExecutionWindowTooLong.selector,
+                IScheduledProtocol.RecurrenceType.Daily,
+                MAX_VALID_DAILY_EXPIRES_AFTER + 1,
+                MAX_VALID_DAILY_EXPIRES_AFTER
+            )
+        );
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Daily,
+            executeAfter,
+            MAX_VALID_DAILY_EXPIRES_AFTER + 1,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_SuccessWhen_WeeklyExecutionWindowIsMaximumValidValue() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            executeAfter,
+            MAX_VALID_WEEKLY_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_RevertWhen_WeeklyExecutionWindowIsTooLong() public {
+        vm.startPrank(payer);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IScheduledProtocol.ScheduledProtocolExecutionWindowTooLong.selector,
+                IScheduledProtocol.RecurrenceType.Weekly,
+                MAX_VALID_WEEKLY_EXPIRES_AFTER + 1,
+                MAX_VALID_WEEKLY_EXPIRES_AFTER
+            )
+        );
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            executeAfter,
+            MAX_VALID_WEEKLY_EXPIRES_AFTER + 1,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_SuccessWhen_MonthlyExecutionWindowIsMaximumValidValue() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            executeAfter,
+            MAX_VALID_MONTHLY_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_RevertWhen_MonthlyExecutionWindowIsTooLong() public {
+        vm.startPrank(payer);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IScheduledProtocol.ScheduledProtocolExecutionWindowTooLong.selector,
+                IScheduledProtocol.RecurrenceType.Monthly,
+                MAX_VALID_MONTHLY_EXPIRES_AFTER + 1,
+                MAX_VALID_MONTHLY_EXPIRES_AFTER
+            )
+        );
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            executeAfter,
+            MAX_VALID_MONTHLY_EXPIRES_AFTER + 1,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_SuccessWhen_LastOfMonthExecutionWindowIsMaximumValidValue() public {
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.LastOfMonth,
+            executeAfter,
+            MAX_VALID_LAST_OF_MONTH_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_RevertWhen_LastOfMonthExecutionWindowIsTooLong() public {
+        vm.startPrank(payer);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IScheduledProtocol.ScheduledProtocolExecutionWindowTooLong.selector,
+                IScheduledProtocol.RecurrenceType.LastOfMonth,
+                MAX_VALID_LAST_OF_MONTH_EXPIRES_AFTER + 1,
+                MAX_VALID_LAST_OF_MONTH_EXPIRES_AFTER
+            )
+        );
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.LastOfMonth,
+            executeAfter,
+            MAX_VALID_LAST_OF_MONTH_EXPIRES_AFTER + 1,
+            VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -267,7 +509,6 @@ contract CreatePaymentTest is Test {
 
     // `RecurrenceType` bounds are enforced by Solidity's ABI decoder. These tests cover valid enum values and their
     // protocol-specific constraints.
-
     function test_CreatePayment_RevertWhen_NoneHasZeroTotalOccurrences() public {
         vm.startPrank(payer);
 
@@ -285,7 +526,7 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
-    function test_CreatePayment_WhenNoneHasOneTotalOccurrence() public {
+    function test_CreatePayment_SuccessWhen_NoneHasOneTotalOccurrences() public {
         vm.startPrank(payer);
 
         scheduledProtocol.createPayment(
@@ -294,7 +535,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             VALID_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
         vm.stopPrank();
@@ -307,7 +548,7 @@ contract CreatePaymentTest is Test {
             abi.encodeWithSelector(
                 IScheduledProtocol.ScheduledProtocolInvalidTotalOccurrences.selector,
                 IScheduledProtocol.RecurrenceType.None,
-                MIN_RECURRING_TOTAL_OCCURRENCES
+                VALID_RECURRING_TOTAL_OCCURRENCES
             )
         );
 
@@ -317,7 +558,7 @@ contract CreatePaymentTest is Test {
             IScheduledProtocol.RecurrenceType.None,
             executeAfter,
             VALID_EXPIRES_AFTER,
-            MIN_RECURRING_TOTAL_OCCURRENCES
+            VALID_RECURRING_TOTAL_OCCURRENCES
         );
         vm.stopPrank();
     }
@@ -341,7 +582,7 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
-    function test_CreatePayment_RevertWhen_RecurringHasOneTotalOccurrence() public {
+    function test_CreatePayment_RevertWhen_RecurringHasOneTotalOccurrences() public {
         IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
 
         vm.startPrank(payer);
@@ -349,25 +590,18 @@ contract CreatePaymentTest is Test {
         for (uint256 i; i < recurringTypes.length; ++i) {
             vm.expectRevert(
                 abi.encodeWithSelector(
-                    IScheduledProtocol.ScheduledProtocolInvalidTotalOccurrences.selector,
-                    recurringTypes[i],
-                    ONE_TIME_TOTAL_OCCURRENCES
+                    IScheduledProtocol.ScheduledProtocolInvalidTotalOccurrences.selector, recurringTypes[i], 1
                 )
             );
 
             scheduledProtocol.createPayment(
-                recipient,
-                VALID_AMOUNT,
-                recurringTypes[i],
-                executeAfter,
-                VALID_EXPIRES_AFTER,
-                ONE_TIME_TOTAL_OCCURRENCES
+                recipient, VALID_AMOUNT, recurringTypes[i], executeAfter, VALID_EXPIRES_AFTER, 1
             );
         }
         vm.stopPrank();
     }
 
-    function test_CreatePayment_WhenRecurringHasMinimumTotalOccurrences() public {
+    function test_CreatePayment_SuccessWhen_RecurringHasMinimumValidTotalOccurrences() public {
         IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
 
         vm.startPrank(payer);
@@ -379,203 +613,31 @@ contract CreatePaymentTest is Test {
                 recurringTypes[i],
                 executeAfter,
                 VALID_EXPIRES_AFTER,
-                MIN_RECURRING_TOTAL_OCCURRENCES
+                MIN_VALID_RECURRING_TOTAL_OCCURRENCES
             );
         }
         vm.stopPrank();
     }
 
-    function test_CreatePayment_RevertWhen_OneTimeExecutionWindowIsTooLong() public {
+    function test_CreatePayment_SuccessWhen_RecurringHasMaximumValidTotalOccurrences() public {
+        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
+
         vm.startPrank(payer);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IScheduledProtocol.ScheduledProtocolExecutionWindowTooLong.selector,
-                IScheduledProtocol.RecurrenceType.None,
-                ONE_TIME_MAX_EXPIRES_AFTER + 1,
-                ONE_TIME_MAX_EXPIRES_AFTER
-            )
-        );
+        for (uint256 i; i < recurringTypes.length; ++i) {
+            uint256 paymentId = scheduledProtocol.createPayment(
+                recipient,
+                VALID_AMOUNT,
+                recurringTypes[i],
+                executeAfter,
+                VALID_EXPIRES_AFTER,
+                MAX_VALID_RECURRING_TOTAL_OCCURRENCES
+            );
 
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            ONE_TIME_MAX_EXPIRES_AFTER + 1,
-            ONE_TIME_TOTAL_OCCURRENCES
-        );
+            IScheduledProtocol.Payment memory payment = scheduledProtocol.getPayment(paymentId);
 
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_WhenOneTimeExecutionWindowIsMaximum() public {
-        vm.startPrank(payer);
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            ONE_TIME_MAX_EXPIRES_AFTER,
-            ONE_TIME_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_RevertWhen_DailyExecutionWindowIsTooLong() public {
-        vm.startPrank(payer);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IScheduledProtocol.ScheduledProtocolExecutionWindowTooLong.selector,
-                IScheduledProtocol.RecurrenceType.Daily,
-                DAILY_MAX_EXPIRES_AFTER + 1,
-                DAILY_MAX_EXPIRES_AFTER
-            )
-        );
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Daily,
-            executeAfter,
-            DAILY_MAX_EXPIRES_AFTER + 1,
-            MIN_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_WhenDailyExecutionWindowIsMaximum() public {
-        vm.startPrank(payer);
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Daily,
-            executeAfter,
-            DAILY_MAX_EXPIRES_AFTER,
-            MIN_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_RevertWhen_WeeklyExecutionWindowIsTooLong() public {
-        vm.startPrank(payer);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IScheduledProtocol.ScheduledProtocolExecutionWindowTooLong.selector,
-                IScheduledProtocol.RecurrenceType.Weekly,
-                WEEKLY_MAX_EXPIRES_AFTER + 1,
-                WEEKLY_MAX_EXPIRES_AFTER
-            )
-        );
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Weekly,
-            executeAfter,
-            WEEKLY_MAX_EXPIRES_AFTER + 1,
-            MIN_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_WhenWeeklyExecutionWindowIsMaximum() public {
-        vm.startPrank(payer);
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Weekly,
-            executeAfter,
-            WEEKLY_MAX_EXPIRES_AFTER,
-            MIN_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_RevertWhen_MonthlyExecutionWindowIsTooLong() public {
-        vm.startPrank(payer);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IScheduledProtocol.ScheduledProtocolExecutionWindowTooLong.selector,
-                IScheduledProtocol.RecurrenceType.Monthly,
-                MONTHLY_MAX_EXPIRES_AFTER + 1,
-                MONTHLY_MAX_EXPIRES_AFTER
-            )
-        );
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            executeAfter,
-            MONTHLY_MAX_EXPIRES_AFTER + 1,
-            MIN_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_WhenMonthlyExecutionWindowIsMaximum() public {
-        vm.startPrank(payer);
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            executeAfter,
-            MONTHLY_MAX_EXPIRES_AFTER,
-            MIN_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_RevertWhen_LastOfMonthExecutionWindowIsTooLong() public {
-        vm.startPrank(payer);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IScheduledProtocol.ScheduledProtocolExecutionWindowTooLong.selector,
-                IScheduledProtocol.RecurrenceType.LastOfMonth,
-                LAST_OF_MONTH_MAX_EXPIRES_AFTER + 1,
-                LAST_OF_MONTH_MAX_EXPIRES_AFTER
-            )
-        );
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            LAST_OF_MONTH_MAX_EXPIRES_AFTER + 1,
-            MIN_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_WhenLastOfMonthExecutionWindowIsMaximum() public {
-        vm.startPrank(payer);
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            LAST_OF_MONTH_MAX_EXPIRES_AFTER,
-            MIN_RECURRING_TOTAL_OCCURRENCES
-        );
+            assertEq(payment.totalOccurrences, MAX_VALID_RECURRING_TOTAL_OCCURRENCES);
+        }
 
         vm.stopPrank();
     }
