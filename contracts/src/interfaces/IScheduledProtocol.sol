@@ -3,7 +3,7 @@
 pragma solidity 0.8.35;
 
 /**
- * @dev External interface for ScheduledProtocol.
+ * @dev External interface for Scheduled Protocol.
  */
 interface IScheduledProtocol {
     /**
@@ -51,7 +51,37 @@ interface IScheduledProtocol {
         bool cancelled;
     }
 
-    // Errors and add 'Require' statements in natspec related to errors
+    /**
+     * @dev `recipient` is the zero address.
+     */
+    error ScheduledProtocolInvalidRecipient(address recipient);
+
+    /**
+     * @dev `amount` is zero.
+     */
+    error ScheduledProtocolInvalidAmount(uint96 amount);
+
+    /**
+     * @dev `executeAfter` is less than or equal to `block.timestamp`.
+     */
+    error ScheduledProtocolInvalidExecuteAfter(uint40 executeAfter);
+
+    /**
+     * @dev `expiresAfter` is zero.
+     */
+    error ScheduledProtocolInvalidExpiresAfter(uint24 expiresAfter);
+
+    /**
+     * @dev `totalOccurrences` is invalid for the selected `recurrence`.
+     */
+    error ScheduledProtocolInvalidTotalOccurrences(RecurrenceType recurrence, uint32 totalOccurrences);
+
+    /**
+     * @dev `expiresAfter` exceeds the maximum allowed for the selected `recurrence`.
+     */
+    error ScheduledProtocolExecutionWindowTooLong(
+        RecurrenceType recurrence, uint24 expiresAfter, uint24 maxExpiresAfter
+    );
 
     /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
@@ -70,11 +100,7 @@ interface IScheduledProtocol {
     /**
      * @dev Emitted when occurrence `occurrenceIndex` of payment schedule `paymentId` is successfully executed.
      */
-    event PaymentExecuted(
-        uint256 indexed paymentId,
-        uint32 indexed occurrenceIndex,
-        address indexed executor
-    );
+    event PaymentExecuted(uint256 indexed paymentId, uint32 indexed occurrenceIndex, address indexed executor);
 
     /**
      * @dev Emitted when payment schedule `paymentId` is cancelled by its payer.
@@ -113,6 +139,11 @@ interface IScheduledProtocol {
      * Emits a {PaymentCancelled} event.
      */
     function cancelPayment(uint256 paymentId) external;
+
+    /**
+     * @dev Returns payment schedule `paymentId`.
+     */
+    function getPayment(uint256 paymentId) external view returns (Payment memory payment);
 
     /**
      * @dev Returns the current lifecycle state of payment schedule `paymentId`.
