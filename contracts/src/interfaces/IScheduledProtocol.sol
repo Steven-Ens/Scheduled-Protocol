@@ -84,6 +84,11 @@ interface IScheduledProtocol {
     );
 
     /**
+     * @dev `paymentId` does not exist.
+     */
+    error ScheduledProtocolInvalidPaymentId(uint256 paymentId);
+
+    /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
      */
     event PaymentCreated(

@@ -91,7 +91,11 @@ contract ScheduledProtocol is IScheduledProtocol {
     /**
      * @inheritdoc IScheduledProtocol
      */
-    function executePayment(uint256 paymentId) external override {}
+    function executePayment(uint256 paymentId) external override {
+        if (paymentId >= _nextPaymentId) {
+            revert ScheduledProtocolInvalidPaymentId(paymentId);
+        }
+    }
 
     /**
      * @inheritdoc IScheduledProtocol
