@@ -118,4 +118,21 @@ contract ScheduledProtocol is IScheduledProtocol {
      * @inheritdoc IScheduledProtocol
      */
     function withdrawProtocolFees() external override {}
+
+    /**
+     * @dev Derives the current `occurrenceIndex` and `occurrenceStart` for a payment schedule.
+     */
+    function _deriveOccurrence(RecurrenceType recurrence, uint40 executeAfter, uint256 timestamp)
+        internal
+        pure
+        returns (uint256 occurrenceIndex, uint256 occurrenceStart)
+    {
+        if (recurrence == RecurrenceType.None) {
+            return (0, uint256(executeAfter));
+        } else if (recurrence == RecurrenceType.Daily) {
+            // integer division
+            occurrenceIndex = (timestamp - executeAfter) / 1 days;
+            occurrenceStart = executeAfter + occurrenceIndex * 1 days;
+        }
+    }
 }
