@@ -1,6 +1,9 @@
 import './style.css'
 
-import { connectWallet } from './clients'
+import {
+  connectWallet,
+  type WalletConnection,
+} from './clients'
 import {
   parseAmount,
   parseExecuteAfter,
@@ -10,6 +13,7 @@ import {
   parseTotalOccurrences,
   type CreatePaymentInput,
 } from './payments'
+import { createPayment } from './protocol'
 
 const connectButton =
   document.querySelector<HTMLButtonElement>('#connect-wallet')
@@ -20,36 +24,51 @@ const walletAddress =
 const createPaymentForm =
   document.querySelector<HTMLFormElement>('#create-payment-form')
 
+let walletConnection: WalletConnection | undefined
+
 connectButton?.addEventListener('click', async () => {
   try {
-    const { account } = await connectWallet()
+    walletConnection = await connectWallet()
 
     connectButton.textContent = 'Connected'
     connectButton.disabled = true
 
     if (walletAddress) {
-      walletAddress.textContent = account
+      walletAddress.textContent = walletConnection.account
     }
   } catch (error) {
     console.error(error)
   }
 })
 
-createPaymentForm?.addEventListener('submit', (event) => {
+createPaymentForm?.addEventListener('submit', async (event) => {
   event.preventDefault()
 
-  const formData = new FormData(createPaymentForm)
+  try {
+    if (!walletConnection) {
+      throw new Error('Connect wallet before creating a payment')
+    }
 
-  const payment: CreatePaymentInput = {
-    recipient: parseRecipient(String(formData.get('recipient'))),
-    amount: parseAmount(String(formData.get('amount'))),
-    recurrence: parseRecurrence(String(formData.get('recurrence'))),
-    executeAfter: parseExecuteAfter(String(formData.get('executeAfter'))),
-    expiresAfter: parseExpiresAfter(String(formData.get('expiresAfter'))),
-    totalOccurrences: parseTotalOccurrences(
-      String(formData.get('totalOccurrences')),
-    ),
+    const formData = new FormData(createPaymentForm)
+
+    const payment: CreatePaymentInput = {
+      recipient: parseRecipient(String(formData.get('recipient'))),
+      amount: parseAmount(String(formData.get('amount'))),
+      recurrence: parseRecurrence(String(formData.get('recurrence'))),
+      executeAfter: parseExecuteAfter(String(formData.get('executeAfter'))),
+      expiresAfter: parseExpiresAfter(String(formData.get('expiresAfter'))),
+      totalOccurrences: parseTotalOccurrences(
+        String(formData.get('totalOccurrences')),
+      ),
+    }
+
+    const result = await createPayment(
+      walletConnection.walletClient,
+      payment,
+    )
+
+    console.log(result)
+  } catch (error) {
+    console.error(error)
   }
-
-  console.log(payment)
 })
