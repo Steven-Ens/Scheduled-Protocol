@@ -24,6 +24,9 @@ const walletAddress =
 const createPaymentForm =
   document.querySelector<HTMLFormElement>('#create-payment-form')
 
+const paymentResult =
+  document.querySelector<HTMLDivElement>('#payment-result')
+
 let walletConnection: WalletConnection | undefined
 
 connectButton?.addEventListener('click', async () => {
@@ -67,7 +70,20 @@ createPaymentForm?.addEventListener('submit', async (event) => {
       payment,
     )
 
-    console.log(result)
+    if (paymentResult) {
+      paymentResult.innerHTML = `
+        <h2>Payment Created</h2>
+        <p>Payment ID: ${result.paymentId}</p>
+        <p>Transaction: ${result.hash}</p>
+        <p>Payer: ${result.payment.payer}</p>
+        <p>Recipient: ${result.payment.recipient}</p>
+        <p>Amount: ${result.payment.amount}</p>
+        <p>Recurrence: ${result.payment.recurrence}</p>
+        <p>Execute After: ${result.payment.executeAfter}</p>
+        <p>Execution Window: ${result.payment.expiresAfter}</p>
+        <p>Total Occurrences: ${result.payment.totalOccurrences}</p>
+      `
+    }
   } catch (error) {
     console.error(error)
   }
