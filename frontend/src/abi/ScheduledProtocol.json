@@ -1,0 +1,357 @@
+[
+  {
+    "type": "function",
+    "name": "cancelPayment",
+    "inputs": [
+      {
+        "name": "paymentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "createPayment",
+    "inputs": [
+      {
+        "name": "recipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint96",
+        "internalType": "uint96"
+      },
+      {
+        "name": "recurrence",
+        "type": "uint8",
+        "internalType": "enum IScheduledProtocol.RecurrenceType"
+      },
+      {
+        "name": "executeAfter",
+        "type": "uint40",
+        "internalType": "uint40"
+      },
+      {
+        "name": "expiresAfter",
+        "type": "uint24",
+        "internalType": "uint24"
+      },
+      {
+        "name": "totalOccurrences",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "paymentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "executePayment",
+    "inputs": [
+      {
+        "name": "paymentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getPayment",
+    "inputs": [
+      {
+        "name": "paymentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "payment",
+        "type": "tuple",
+        "internalType": "struct IScheduledProtocol.Payment",
+        "components": [
+          {
+            "name": "payer",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "recipient",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "amount",
+            "type": "uint96",
+            "internalType": "uint96"
+          },
+          {
+            "name": "recurrence",
+            "type": "uint8",
+            "internalType": "enum IScheduledProtocol.RecurrenceType"
+          },
+          {
+            "name": "executeAfter",
+            "type": "uint40",
+            "internalType": "uint40"
+          },
+          {
+            "name": "expiresAfter",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "totalOccurrences",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "lastExecutedOccurrencePlusOne",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "cancelled",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getPaymentStatus",
+    "inputs": [
+      {
+        "name": "paymentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "status",
+        "type": "uint8",
+        "internalType": "enum IScheduledProtocol.PaymentStatus"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "withdrawProtocolFees",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "PaymentCancelled",
+    "inputs": [
+      {
+        "name": "paymentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PaymentCreated",
+    "inputs": [
+      {
+        "name": "paymentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "payer",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "recipient",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint96",
+        "indexed": false,
+        "internalType": "uint96"
+      },
+      {
+        "name": "recurrence",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "enum IScheduledProtocol.RecurrenceType"
+      },
+      {
+        "name": "executeAfter",
+        "type": "uint40",
+        "indexed": false,
+        "internalType": "uint40"
+      },
+      {
+        "name": "expiresAfter",
+        "type": "uint24",
+        "indexed": false,
+        "internalType": "uint24"
+      },
+      {
+        "name": "totalOccurrences",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PaymentExecuted",
+    "inputs": [
+      {
+        "name": "paymentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "occurrenceIndex",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "executor",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ProtocolFeesWithdrawn",
+    "inputs": [
+      {
+        "name": "owner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "ScheduledProtocolExecutionWindowTooLong",
+    "inputs": [
+      {
+        "name": "recurrence",
+        "type": "uint8",
+        "internalType": "enum IScheduledProtocol.RecurrenceType"
+      },
+      {
+        "name": "expiresAfter",
+        "type": "uint24",
+        "internalType": "uint24"
+      },
+      {
+        "name": "maxExpiresAfter",
+        "type": "uint24",
+        "internalType": "uint24"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ScheduledProtocolInvalidAmount",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint96",
+        "internalType": "uint96"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ScheduledProtocolInvalidExecuteAfter",
+    "inputs": [
+      {
+        "name": "executeAfter",
+        "type": "uint40",
+        "internalType": "uint40"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ScheduledProtocolInvalidExpiresAfter",
+    "inputs": [
+      {
+        "name": "expiresAfter",
+        "type": "uint24",
+        "internalType": "uint24"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ScheduledProtocolInvalidRecipient",
+    "inputs": [
+      {
+        "name": "recipient",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ScheduledProtocolInvalidTotalOccurrences",
+    "inputs": [
+      {
+        "name": "recurrence",
+        "type": "uint8",
+        "internalType": "enum IScheduledProtocol.RecurrenceType"
+      },
+      {
+        "name": "totalOccurrences",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ]
+  }
+]
