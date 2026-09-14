@@ -12,6 +12,77 @@
     
     <p id="wallet-address"></p>
 
+    <h2>Create Scheduled Payment</h2>
+
+    <form id="create-payment-form">
+      <div>
+        <label for="recipient">Recipient</label>
+        <input
+          id="recipient"
+          name="recipient"
+          type="text"
+          placeholder="0x..."
+          required
+        />
+      </div>
+
+      <div>
+        <label for="amount">Amount</label>
+        <input
+          id="amount"
+          name="amount"
+          type="number"
+          min="0"
+          step="any"
+          required
+        />
+      </div>
+
+      <div>
+        <label for="recurrence">Recurrence</label>
+        <select id="recurrence" name="recurrence" required>
+          <option value="0">None</option>
+          <option value="1">Daily</option>
+          <option value="2">Weekly</option>
+          <option value="3">Monthly</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="execute-after">Execute After</label>
+        <input
+          id="execute-after"
+          name="executeAfter"
+          type="datetime-local"
+          required
+        />
+      </div>
+
+      <div>
+        <label for="expires-after">Execution Window</label>
+        <input
+          id="expires-after"
+          name="expiresAfter"
+          type="number"
+          min="0"
+          required
+        />
+      </div>
+
+      <div>
+        <label for="total-occurrences">Total Occurrences</label>
+        <input
+          id="total-occurrences"
+          name="totalOccurrences"
+          type="number"
+          min="1"
+          required
+        />
+      </div>
+
+      <button type="submit">Create Payment</button>
+    </form>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
