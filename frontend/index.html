@@ -27,11 +27,12 @@
       </div>
 
       <div>
-        <label for="amount">Amount</label>
+        <label for="amount">Amount (ETH)</label>
         <input
           id="amount"
           name="amount"
           type="number"
+          placeholder="0"
           min="0"
           step="any"
           required
@@ -45,11 +46,12 @@
           <option value="1">Daily</option>
           <option value="2">Weekly</option>
           <option value="3">Monthly</option>
+          <option value="4">LastOfMonth</option>
         </select>
       </div>
 
       <div>
-        <label for="execute-after">Execute After</label>
+        <label for="execute-after">Execute After (Seconds)</label>
         <input
           id="execute-after"
           name="executeAfter"
