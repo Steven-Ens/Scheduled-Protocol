@@ -43,3 +43,6 @@ export async function connectWallet() {
     account,
   }
 }
+
+export type WalletConnection =
+  Awaited<ReturnType<typeof connectWallet>>
