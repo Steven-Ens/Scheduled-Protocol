@@ -131,4 +131,64 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceIndex, 3);
         assertEq(occurrenceStart, uint256(executeAfter) + 3 days);
     }
+
+    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsAtFirstOccurrence() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        uint256 timestamp = uint256(executeAfter);
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.Weekly, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 0);
+        assertEq(occurrenceStart, uint256(executeAfter));
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsWithinFirstOccurrence() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        uint256 timestamp = uint256(executeAfter) + 3 days + 12 hours;
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.Weekly, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 0);
+        assertEq(occurrenceStart, uint256(executeAfter));
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsAtEndOfFirstOccurrence() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        uint256 timestamp = uint256(executeAfter) + 1 weeks - 1;
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.Weekly, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 0);
+        assertEq(occurrenceStart, uint256(executeAfter));
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsAtSecondOccurrence() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        uint256 timestamp = uint256(executeAfter) + 1 weeks;
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.Weekly, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 1);
+        assertEq(occurrenceStart, uint256(executeAfter) + 1 weeks);
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsWithinFutureOccurrence() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        uint256 timestamp = uint256(executeAfter) + 3 weeks + 3 days;
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.Weekly, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 3);
+        assertEq(occurrenceStart, uint256(executeAfter) + 3 weeks);
+    }
 }

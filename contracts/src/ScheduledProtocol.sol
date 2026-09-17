@@ -139,6 +139,9 @@ contract ScheduledProtocol is IScheduledProtocol {
             // integer division
             occurrenceIndex = (timestamp - executeAfter) / 1 days;
             occurrenceStart = executeAfter + occurrenceIndex * 1 days;
+        } else if (recurrence == RecurrenceType.Weekly) {
+            occurrenceIndex = (timestamp - executeAfter) / 7 days;
+            occurrenceStart = executeAfter + occurrenceIndex * 7 days;
         }
     }
 }
