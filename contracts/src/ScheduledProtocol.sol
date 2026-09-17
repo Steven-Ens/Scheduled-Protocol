@@ -2,6 +2,8 @@
 
 pragma solidity 0.8.35;
 
+import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts/BokkyPooBahsDateTimeLibrary.sol";
+
 import {IScheduledProtocol} from "./interfaces/IScheduledProtocol.sol";
 
 /**
@@ -98,6 +100,8 @@ contract ScheduledProtocol is IScheduledProtocol {
 
         Payment storage payment = _payments[paymentId];
 
+        // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.
+        // forge-lint: disable-next-line(block-timestamp)
         if (block.timestamp < payment.executeAfter) {
             revert ScheduledProtocolExecutionNotStarted(payment.executeAfter);
         }
@@ -136,12 +140,20 @@ contract ScheduledProtocol is IScheduledProtocol {
         if (recurrence == RecurrenceType.None) {
             return (0, uint256(executeAfter));
         } else if (recurrence == RecurrenceType.Daily) {
-            // integer division
+            // Integer division
             occurrenceIndex = (timestamp - executeAfter) / 1 days;
             occurrenceStart = executeAfter + occurrenceIndex * 1 days;
         } else if (recurrence == RecurrenceType.Weekly) {
             occurrenceIndex = (timestamp - executeAfter) / 7 days;
             occurrenceStart = executeAfter + occurrenceIndex * 7 days;
+        } else if (recurrence == RecurrenceType.Monthly) {
+            // Candidates
+            occurrenceIndex = BokkyPooBahsDateTimeLibrary.diffMonths(executeAfter, timestamp);
+            occurrenceStart = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
+            if (occurrenceStart > timestamp) {
+                occurrenceIndex--;
+                occurrenceStart = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
+            }
         }
     }
 }
