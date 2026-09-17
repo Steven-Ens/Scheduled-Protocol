@@ -21,6 +21,7 @@ contract ScheduledProtocolHarness is ScheduledProtocol {
 contract OccurrenceDerivationTest is Test {
     address private payer;
     address private recipient;
+    uint40 private executeAfter;
 
     ScheduledProtocol private scheduledProtocol;
 
@@ -29,6 +30,8 @@ contract OccurrenceDerivationTest is Test {
         recipient = makeAddr("recipient");
 
         scheduledProtocol = new ScheduledProtocol();
+
+        executeAfter = uint40(block.timestamp + 1 days);
     }
 
     function test_OccurrenceDerivation_RevertWhen_InvalidPaymentId() public {
@@ -44,8 +47,6 @@ contract OccurrenceDerivationTest is Test {
     function test_OccurrenceDerivation_SuccessWhen_NoneDerivesOccurrenceZero() public {
         ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
 
-        uint40 executeAfter = uint40(block.timestamp + 1 days);
-
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
             harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.None, executeAfter, block.timestamp);
 
@@ -53,11 +54,21 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, executeAfter);
     }
 
+    function test_OccurrenceDerivation_SuccessWhen_DailyIsAtFirstOccurrence() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        uint256 timestamp = uint256(executeAfter);
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.Daily, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 0);
+        assertEq(occurrenceStart, uint256(executeAfter));
+    }
+
     function test_OccurrenceDerivation_SuccessWhen_DailyIsWithinFirstOccurrence() public {
         ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
 
-        uint40 executeAfter = uint40(block.timestamp + 1 days);
-        // Within first occurrence
         uint256 timestamp = uint256(executeAfter) + 12 hours;
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -67,11 +78,22 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, uint256(executeAfter));
     }
 
-    function test_OccurrenceDerivation_SuccessWhen_DailyIsAtFirstOccurrence() public {
+    function test_OccurrenceDerivation_SuccessWhen_DailyIsAtEndOfFirstOccurrence() public {
         ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
 
-        uint40 executeAfter = uint40(block.timestamp + 1 days);
-        uint256 timestamp = uint256(executeAfter + 1 days);
+        uint256 timestamp = uint256(executeAfter) + 1 days - 1;
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.Daily, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 0);
+        assertEq(occurrenceStart, uint256(executeAfter));
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_DailyIsAtSecondOccurrence() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        uint256 timestamp = uint256(executeAfter) + 1 days;
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
             harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.Daily, executeAfter, timestamp);
@@ -83,14 +105,12 @@ contract OccurrenceDerivationTest is Test {
     function test_OccurrenceDerivation_SuccessWhen_DailyIsWithinFutureOccurrence() public {
         ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
 
-        uint40 executeAfter = uint40(block.timestamp + 1 days);
-        // Within first occurrence
-        uint256 timestamp = uint256(executeAfter) + 2 days + 12 hours;
+        uint256 timestamp = uint256(executeAfter) + 3 days + 12 hours;
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
             harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.Daily, executeAfter, timestamp);
 
-        assertEq(occurrenceIndex, 2);
-        assertEq(occurrenceStart, uint256(executeAfter) + 2 days);
+        assertEq(occurrenceIndex, 3);
+        assertEq(occurrenceStart, uint256(executeAfter) + 3 days);
     }
 }
