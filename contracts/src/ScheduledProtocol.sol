@@ -95,6 +95,12 @@ contract ScheduledProtocol is IScheduledProtocol {
         if (paymentId >= _nextPaymentId) {
             revert ScheduledProtocolInvalidPaymentId(paymentId);
         }
+
+        Payment storage payment = _payments[paymentId];
+
+        if (block.timestamp < payment.executeAfter) {
+            revert ScheduledProtocolExecutionNotStarted(payment.executeAfter);
+        }
     }
 
     /**

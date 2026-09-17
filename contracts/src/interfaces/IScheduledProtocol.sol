@@ -89,6 +89,11 @@ interface IScheduledProtocol {
     error ScheduledProtocolInvalidPaymentId(uint256 paymentId);
 
     /**
+     * @dev `block.timestamp` is less than `executeAfter`.
+     */
+    error ScheduledProtocolExecutionNotStarted(uint40 executeAfter);
+
+    /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
      */
     event PaymentCreated(
