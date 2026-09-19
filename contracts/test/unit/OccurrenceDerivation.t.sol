@@ -9,7 +9,7 @@ import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts
 import {IScheduledProtocol} from "../../src/interfaces/IScheduledProtocol.sol";
 import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
 
-// external wrapper for _deriveOccurrence.
+// Exposes the internal _deriveOccurrence helper for testing.
 contract ScheduledProtocolHarness is ScheduledProtocol {
     function deriveOccurrence(RecurrenceType recurrence, uint40 executeAfter, uint256 timestamp)
         external
@@ -35,7 +35,7 @@ contract OccurrenceDerivationTest is Test {
         scheduledProtocol = new ScheduledProtocol();
     }
 
-    function test_OccurrenceDerivation_RevertWhen_InvalidPaymentId() public {
+    function test_ExecutePayment_RevertWhen_InvalidPaymentId() public {
         vm.startPrank(payer);
 
         vm.expectRevert(abi.encodeWithSelector(IScheduledProtocol.ScheduledProtocolInvalidPaymentId.selector, 0));
@@ -123,7 +123,7 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, uint256(executeAfter) + 1 days);
     }
 
-    function test_OccurrenceDerivation_SuccessWhen_DailyIsWithinFutureOccurrence() public {
+    function test_OccurrenceDerivation_SuccessWhen_DailyIsWithinLaterOccurrence() public {
         ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
 
         uint256 timestamp = uint256(executeAfter) + 3 days + 12 hours;
@@ -183,7 +183,7 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, uint256(executeAfter) + 1 weeks);
     }
 
-    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsWithinFutureOccurrence() public {
+    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsWithinLaterOccurrence() public {
         ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
 
         uint256 timestamp = uint256(executeAfter) + 3 weeks + 3 days;
@@ -258,7 +258,7 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, timestamp);
     }
 
-    function test_OccurrenceDerivation_SuccessWhen_MonthlyIsWithinFutureOccurrence() public {
+    function test_OccurrenceDerivation_SuccessWhen_MonthlyIsWithinLaterOccurrence() public {
         ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
 
         // January 15th, 2026 @ 10:00 UTC
@@ -334,7 +334,7 @@ contract OccurrenceDerivationTest is Test {
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
-        // March 31st, 2028 @ 10:00 UTC
+        // March 31st, 2026 @ 10:00 UTC
         uint256 timestamp = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 3, 31, 10, 0, 0);
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -350,7 +350,7 @@ contract OccurrenceDerivationTest is Test {
         // April 30th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 30, 10, 0, 0));
 
-        // May 30th, 2028 @ 10:00 UTC
+        // May 30th, 2026 @ 10:00 UTC
         uint256 timestamp = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 5, 30, 10, 0, 0);
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -366,7 +366,7 @@ contract OccurrenceDerivationTest is Test {
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
-        // February 28th, 2028 @ 10:00 UTC
+        // February 28th, 2026 @ 10:00 UTC
         uint256 timestamp = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 2, 28, 9, 59, 59);
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -374,5 +374,151 @@ contract OccurrenceDerivationTest is Test {
 
         assertEq(occurrenceIndex, 0);
         assertEq(occurrenceStart, executeAfter);
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_LastOfMonthIsAtFirstOccurrence() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
+        uint256 timestamp = uint256(executeAfter);
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.LastOfMonth, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 0);
+        assertEq(occurrenceStart, timestamp);
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_LastOfMonthIsWithinFirstOccurrence() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
+        // February 15th, 2026 @ 10:00 UTC
+        uint256 timestamp = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 2, 15, 10, 0, 0);
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.LastOfMonth, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 0);
+        assertEq(occurrenceStart, uint256(executeAfter));
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_LastOfMonthIsAtEndOfFirstOccurrence() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
+        // February 28th, 2026 @ 9:59:59 UTC
+        uint256 timestamp = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 2, 28, 9, 59, 59);
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.LastOfMonth, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 0);
+        assertEq(occurrenceStart, uint256(executeAfter));
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_LastOfMonthIsAtSecondOccurrence() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
+        // February 28th, 2026 @ 10:00 UTC
+        uint256 timestamp = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 2, 28, 10, 0, 0);
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.LastOfMonth, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 1);
+        assertEq(occurrenceStart, timestamp);
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_LastOfMonthIsWithinLaterOccurrence() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
+        // April 15th, 2026 @ 10:00 UTC
+        uint256 timestamp = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 15, 10, 0, 0);
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.LastOfMonth, executeAfter, timestamp);
+
+        // March 31st, 2026 @ 10:00 UTC
+        uint256 expectedOccurrenceStart = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 3, 31, 10, 0, 0);
+
+        assertEq(occurrenceIndex, 2);
+        assertEq(occurrenceStart, expectedOccurrenceStart);
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_LastOfMonthAdvancesToFinalDay() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        // April 30th, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 30, 10, 0, 0));
+
+        // May 31st, 2026 @ 10:00 UTC
+        uint256 timestamp = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 5, 31, 10, 0, 0);
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.LastOfMonth, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 1);
+        assertEq(occurrenceStart, timestamp);
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_LastOfMonthDoesNotAdvanceEarly() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        // April 30th, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 30, 10, 0, 0));
+
+        // May 30th, 2026 @ 10:00 UTC
+        uint256 timestamp = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 5, 30, 10, 0, 0);
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.LastOfMonth, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 0);
+        assertEq(occurrenceStart, executeAfter);
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_LastOfMonthUsesLeapDay() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        // January 31st, 2028 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2028, 1, 31, 10, 0, 0));
+
+        // February 29th, 2028 @ 10:00 UTC
+        uint256 timestamp = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2028, 2, 29, 10, 0, 0);
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.LastOfMonth, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 1);
+        assertEq(occurrenceStart, timestamp);
+    }
+
+    function test_OccurrenceDerivation_SuccessWhen_LastOfMonthAdvancesFromFebruaryToMarch() public {
+        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
+
+        // February 28th, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 2, 28, 10, 0, 0));
+
+        // March 31st, 2026 @ 10:00 UTC
+        uint256 timestamp = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 3, 31, 10, 0, 0);
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            harness.deriveOccurrence(IScheduledProtocol.RecurrenceType.LastOfMonth, executeAfter, timestamp);
+
+        assertEq(occurrenceIndex, 1);
+        assertEq(occurrenceStart, timestamp);
     }
 }

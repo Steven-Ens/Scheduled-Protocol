@@ -140,20 +140,40 @@ contract ScheduledProtocol is IScheduledProtocol {
         if (recurrence == RecurrenceType.None) {
             return (0, uint256(executeAfter));
         } else if (recurrence == RecurrenceType.Daily) {
-            // Integer division
             occurrenceIndex = (timestamp - executeAfter) / 1 days;
             occurrenceStart = executeAfter + occurrenceIndex * 1 days;
         } else if (recurrence == RecurrenceType.Weekly) {
             occurrenceIndex = (timestamp - executeAfter) / 7 days;
             occurrenceStart = executeAfter + occurrenceIndex * 7 days;
         } else if (recurrence == RecurrenceType.Monthly) {
-            // Candidates
             occurrenceIndex = BokkyPooBahsDateTimeLibrary.diffMonths(executeAfter, timestamp);
             occurrenceStart = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
             if (occurrenceStart > timestamp) {
                 occurrenceIndex--;
                 occurrenceStart = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
             }
+        } else if (recurrence == RecurrenceType.LastOfMonth) {
+            occurrenceIndex = BokkyPooBahsDateTimeLibrary.diffMonths(executeAfter, timestamp);
+            uint256 targetMonthTimestamp = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
+            occurrenceStart = _lastOfMonthOccurrenceStart(targetMonthTimestamp);
+            if (occurrenceStart > timestamp) {
+                occurrenceIndex--;
+                targetMonthTimestamp = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
+                occurrenceStart = _lastOfMonthOccurrenceStart(targetMonthTimestamp);
+            }
         }
+    }
+
+    /**
+     * @dev Returns an `occurrenceStart` for the target month's last day, preserving the original anchor's time of day.
+     */
+    function _lastOfMonthOccurrenceStart(uint256 targetMonthTimestamp) internal pure returns (uint256 occurrenceStart) {
+        (uint256 year, uint256 month,, uint256 hour, uint256 minute, uint256 second) =
+            BokkyPooBahsDateTimeLibrary.timestampToDateTime(targetMonthTimestamp);
+
+        uint256 lastDayOfMonth = BokkyPooBahsDateTimeLibrary.getDaysInMonth(targetMonthTimestamp);
+
+        occurrenceStart =
+            BokkyPooBahsDateTimeLibrary.timestampFromDateTime(year, month, lastDayOfMonth, hour, minute, second);
     }
 }
