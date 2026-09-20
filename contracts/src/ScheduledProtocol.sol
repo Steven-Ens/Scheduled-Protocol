@@ -16,6 +16,16 @@ contract ScheduledProtocol is IScheduledProtocol {
     mapping(uint256 paymentId => Payment payment) private _payments;
 
     /**
+     * @dev Reverts is `paymentId` does not exist.
+     */
+    modifier isValidPaymentId(uint256 paymentId) {
+        if (paymentId >= _nextPaymentId) {
+            revert ScheduledProtocolInvalidPaymentId(paymentId);
+        }
+        _;
+    }
+
+    /**
      * @inheritdoc IScheduledProtocol
      */
     function createPayment(
@@ -102,11 +112,7 @@ contract ScheduledProtocol is IScheduledProtocol {
     /**
      * @inheritdoc IScheduledProtocol
      */
-    function executePayment(uint256 paymentId) external override {
-        if (paymentId >= _nextPaymentId) {
-            revert ScheduledProtocolInvalidPaymentId(paymentId);
-        }
-
+    function executePayment(uint256 paymentId) external override isValidPaymentId(paymentId) {
         Payment storage payment = _payments[paymentId];
 
         // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.
@@ -124,14 +130,26 @@ contract ScheduledProtocol is IScheduledProtocol {
     /**
      * @inheritdoc IScheduledProtocol
      */
-    function getPayment(uint256 paymentId) external view override returns (Payment memory payment) {
+    function getPayment(uint256 paymentId)
+        external
+        view
+        override
+        isValidPaymentId(paymentId)
+        returns (Payment memory payment)
+    {
         return _payments[paymentId];
     }
 
     /**
      * @inheritdoc IScheduledProtocol
      */
-    function getPaymentStatus(uint256 paymentId) external view override returns (PaymentStatus status) {}
+    function getPaymentStatus(uint256 paymentId)
+        external
+        view
+        override
+        isValidPaymentId(paymentId)
+        returns (PaymentStatus status)
+    {}
 
     /**
      * @inheritdoc IScheduledProtocol
