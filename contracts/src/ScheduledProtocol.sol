@@ -2,6 +2,8 @@
 
 pragma solidity 0.8.35;
 
+import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts/BokkyPooBahsDateTimeLibrary.sol";
+
 import {IScheduledProtocol} from "./interfaces/IScheduledProtocol.sol";
 
 /**
@@ -36,6 +38,15 @@ contract ScheduledProtocol is IScheduledProtocol {
         // forge-lint: disable-next-line(block-timestamp)
         if (executeAfter <= block.timestamp) {
             revert ScheduledProtocolInvalidExecuteAfter(executeAfter);
+        }
+
+        if (recurrence == RecurrenceType.LastOfMonth) {
+            uint256 dayOfMonth = BokkyPooBahsDateTimeLibrary.getDay(executeAfter);
+            uint256 lastDayOfMonth = BokkyPooBahsDateTimeLibrary.getDaysInMonth(executeAfter);
+
+            if (dayOfMonth != lastDayOfMonth) {
+                revert ScheduledProtocolInvalidLastOfMonthExecuteAfter(executeAfter);
+            }
         }
 
         if (expiresAfter == 0) {
@@ -91,7 +102,19 @@ contract ScheduledProtocol is IScheduledProtocol {
     /**
      * @inheritdoc IScheduledProtocol
      */
-    function executePayment(uint256 paymentId) external override {}
+    function executePayment(uint256 paymentId) external override {
+        if (paymentId >= _nextPaymentId) {
+            revert ScheduledProtocolInvalidPaymentId(paymentId);
+        }
+
+        Payment storage payment = _payments[paymentId];
+
+        // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp < payment.executeAfter) {
+            revert ScheduledProtocolExecutionNotStarted(payment.executeAfter);
+        }
+    }
 
     /**
      * @inheritdoc IScheduledProtocol
@@ -114,4 +137,52 @@ contract ScheduledProtocol is IScheduledProtocol {
      * @inheritdoc IScheduledProtocol
      */
     function withdrawProtocolFees() external override {}
+
+    /**
+     * @dev Derives the current `occurrenceIndex` and `occurrenceStart` for a payment schedule.
+     */
+    function _deriveOccurrence(RecurrenceType recurrence, uint40 executeAfter, uint256 timestamp)
+        internal
+        pure
+        returns (uint256 occurrenceIndex, uint256 occurrenceStart)
+    {
+        if (recurrence == RecurrenceType.None) {
+            return (0, uint256(executeAfter));
+        } else if (recurrence == RecurrenceType.Daily) {
+            occurrenceIndex = (timestamp - executeAfter) / 1 days;
+            occurrenceStart = executeAfter + occurrenceIndex * 1 days;
+        } else if (recurrence == RecurrenceType.Weekly) {
+            occurrenceIndex = (timestamp - executeAfter) / 7 days;
+            occurrenceStart = executeAfter + occurrenceIndex * 7 days;
+        } else if (recurrence == RecurrenceType.Monthly) {
+            occurrenceIndex = BokkyPooBahsDateTimeLibrary.diffMonths(executeAfter, timestamp);
+            occurrenceStart = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
+            if (occurrenceStart > timestamp) {
+                occurrenceIndex--;
+                occurrenceStart = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
+            }
+        } else if (recurrence == RecurrenceType.LastOfMonth) {
+            occurrenceIndex = BokkyPooBahsDateTimeLibrary.diffMonths(executeAfter, timestamp);
+            uint256 targetMonthTimestamp = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
+            occurrenceStart = _lastOfMonthOccurrenceStart(targetMonthTimestamp);
+            if (occurrenceStart > timestamp) {
+                occurrenceIndex--;
+                targetMonthTimestamp = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
+                occurrenceStart = _lastOfMonthOccurrenceStart(targetMonthTimestamp);
+            }
+        }
+    }
+
+    /**
+     * @dev Returns an `occurrenceStart` for the target month's last day, preserving the original anchor's time of day.
+     */
+    function _lastOfMonthOccurrenceStart(uint256 targetMonthTimestamp) internal pure returns (uint256 occurrenceStart) {
+        (uint256 year, uint256 month,, uint256 hour, uint256 minute, uint256 second) =
+            BokkyPooBahsDateTimeLibrary.timestampToDateTime(targetMonthTimestamp);
+
+        uint256 lastDayOfMonth = BokkyPooBahsDateTimeLibrary.getDaysInMonth(targetMonthTimestamp);
+
+        occurrenceStart =
+            BokkyPooBahsDateTimeLibrary.timestampFromDateTime(year, month, lastDayOfMonth, hour, minute, second);
+    }
 }

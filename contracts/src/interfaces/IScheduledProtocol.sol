@@ -67,6 +67,11 @@ interface IScheduledProtocol {
     error ScheduledProtocolInvalidExecuteAfter(uint40 executeAfter);
 
     /**
+     * @dev `executeAfter` for `LastOfMonth` is not the final calendar day of its month.
+     */
+    error ScheduledProtocolInvalidLastOfMonthExecuteAfter(uint40 executeAfter);
+
+    /**
      * @dev `expiresAfter` is zero.
      */
     error ScheduledProtocolInvalidExpiresAfter(uint24 expiresAfter);
@@ -82,6 +87,16 @@ interface IScheduledProtocol {
     error ScheduledProtocolExecutionWindowTooLong(
         RecurrenceType recurrence, uint24 expiresAfter, uint24 maxExpiresAfter
     );
+
+    /**
+     * @dev `paymentId` does not exist.
+     */
+    error ScheduledProtocolInvalidPaymentId(uint256 paymentId);
+
+    /**
+     * @dev `block.timestamp` is less than `executeAfter`.
+     */
+    error ScheduledProtocolExecutionNotStarted(uint40 executeAfter);
 
     /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
