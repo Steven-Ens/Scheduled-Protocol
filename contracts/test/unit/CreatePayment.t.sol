@@ -4,6 +4,8 @@ pragma solidity 0.8.35;
 
 import {Test} from "forge-std/Test.sol";
 
+import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts/BokkyPooBahsDateTimeLibrary.sol";
+
 import {IScheduledProtocol} from "../../src/interfaces/IScheduledProtocol.sol";
 import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
 
@@ -473,6 +475,9 @@ contract CreatePaymentTest is Test {
     }
 
     function test_CreatePayment_SuccessWhen_LastOfMonthExecutionWindowIsMaximumValidValue() public {
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
         vm.startPrank(payer);
 
         scheduledProtocol.createPayment(
@@ -488,6 +493,9 @@ contract CreatePaymentTest is Test {
     }
 
     function test_CreatePayment_RevertWhen_LastOfMonthExecutionWindowIsTooLong() public {
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
         vm.startPrank(payer);
 
         vm.expectRevert(
@@ -567,6 +575,9 @@ contract CreatePaymentTest is Test {
     function test_CreatePayment_RevertWhen_RecurringHasZeroTotalOccurrences() public {
         IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
 
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
         vm.startPrank(payer);
 
         for (uint256 i; i < recurringTypes.length; ++i) {
@@ -586,6 +597,9 @@ contract CreatePaymentTest is Test {
 
     function test_CreatePayment_RevertWhen_RecurringHasOneTotalOccurrences() public {
         IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
+
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
         vm.startPrank(payer);
 
@@ -607,6 +621,9 @@ contract CreatePaymentTest is Test {
     function test_CreatePayment_SuccessWhen_RecurringHasMinimumValidTotalOccurrences() public {
         IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
 
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
         vm.startPrank(payer);
 
         for (uint256 i; i < recurringTypes.length; ++i) {
@@ -626,6 +643,9 @@ contract CreatePaymentTest is Test {
     function test_CreatePayment_SuccessWhen_RecurringHasMaximumValidTotalOccurrences() public {
         IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
 
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
         vm.startPrank(payer);
 
         for (uint256 i; i < recurringTypes.length; ++i) {
@@ -642,6 +662,102 @@ contract CreatePaymentTest is Test {
 
             assertEq(payment.totalOccurrences, MAX_VALID_RECURRING_TOTAL_OCCURRENCES);
         }
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_SuccessWhen_LastOfMonthIsLastDayOf28DayMonth() public {
+        // February 28th, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 2, 28, 10, 0, 0));
+
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.LastOfMonth,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            MIN_VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_SuccessWhen_LastOfMonthIsLastDayOf29DayMonth() public {
+        // February 29th, 2028 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2028, 2, 29, 10, 0, 0));
+
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.LastOfMonth,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            MIN_VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_SuccessWhen_LastOfMonthIsLastDayOf30DayMonth() public {
+        // April 30th, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 30, 10, 0, 0));
+
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.LastOfMonth,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            MIN_VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_SuccessWhen_LastOfMonthIsLastDayOf31DayMonth() public {
+        // May 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 5, 31, 10, 0, 0));
+
+        vm.startPrank(payer);
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.LastOfMonth,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            MIN_VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_CreatePayment_RevertWhen_LastOfMonthIsNotLastDayOfMonth() public {
+        // January 1st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 1, 10, 0, 0));
+
+        vm.startPrank(payer);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IScheduledProtocol.ScheduledProtocolInvalidLastOfMonthExecuteAfter.selector, executeAfter
+            )
+        );
+
+        scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.LastOfMonth,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            MIN_VALID_RECURRING_TOTAL_OCCURRENCES
+        );
 
         vm.stopPrank();
     }

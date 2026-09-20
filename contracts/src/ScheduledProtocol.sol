@@ -40,6 +40,15 @@ contract ScheduledProtocol is IScheduledProtocol {
             revert ScheduledProtocolInvalidExecuteAfter(executeAfter);
         }
 
+        if (recurrence == RecurrenceType.LastOfMonth) {
+            uint256 dayOfMonth = BokkyPooBahsDateTimeLibrary.getDay(executeAfter);
+            uint256 lastDayOfMonth = BokkyPooBahsDateTimeLibrary.getDaysInMonth(executeAfter);
+
+            if (dayOfMonth != lastDayOfMonth) {
+                revert ScheduledProtocolInvalidLastOfMonthExecuteAfter(executeAfter);
+            }
+        }
+
         if (expiresAfter == 0) {
             revert ScheduledProtocolInvalidExpiresAfter(expiresAfter);
         }

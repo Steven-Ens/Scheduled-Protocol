@@ -67,6 +67,11 @@ interface IScheduledProtocol {
     error ScheduledProtocolInvalidExecuteAfter(uint40 executeAfter);
 
     /**
+     * @dev `executeAfter` for `LastOfMonth` is not the final calendar day of its month.
+     */
+    error ScheduledProtocolInvalidLastOfMonthExecuteAfter(uint40 executeAfter);
+
+    /**
      * @dev `expiresAfter` is zero.
      */
     error ScheduledProtocolInvalidExpiresAfter(uint24 expiresAfter);
