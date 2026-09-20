@@ -35,6 +35,8 @@ contract OccurrenceDerivationTest is Test {
         scheduledProtocol = new ScheduledProtocol();
     }
 
+    // Execution validation
+
     function test_ExecutePayment_RevertWhen_InvalidPaymentId() public {
         vm.startPrank(payer);
 
@@ -63,6 +65,8 @@ contract OccurrenceDerivationTest is Test {
         vm.stopPrank();
     }
 
+    // None
+
     function test_OccurrenceDerivation_SuccessWhen_NoneDerivesOccurrenceZero() public {
         ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
 
@@ -86,6 +90,8 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceIndex, 0);
         assertEq(occurrenceStart, executeAfter);
     }
+
+    // Daily
 
     function test_OccurrenceDerivation_SuccessWhen_DailyIsAtFirstOccurrence() public {
         ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
@@ -147,6 +153,8 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, uint256(executeAfter) + 3 days);
     }
 
+    // Weekly
+
     function test_OccurrenceDerivation_SuccessWhen_WeeklyIsAtFirstOccurrence() public {
         ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
 
@@ -206,6 +214,8 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceIndex, 3);
         assertEq(occurrenceStart, uint256(executeAfter) + 3 weeks);
     }
+
+    // Monthly
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyIsAtFirstOccurrence() public {
         ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
@@ -419,6 +429,8 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceIndex, 1);
         assertEq(occurrenceStart, timestamp);
     }
+
+    // LastOfMonth
 
     function test_OccurrenceDerivation_SuccessWhen_LastOfMonthIsAtFirstOccurrence() public {
         ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
