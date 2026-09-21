@@ -217,7 +217,7 @@ contract GetPaymentStatusTest is Test {
         assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Active));
     }
 
-    function test_GetPaymentStatus_SuccessWhen_DailyBeforeFinalWindowExpiration() public {
+    function test_GetPaymentStatus_SuccessWhen_DailyIsBeforeFinalWindowExpiration() public {
         vm.startPrank(payer);
 
         uint256 paymentId = scheduledProtocol.createPayment(
@@ -272,6 +272,134 @@ contract GetPaymentStatusTest is Test {
         );
 
         vm.warp(executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 days) + VALID_EXPIRES_AFTER + 1);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Completed));
+    }
+
+    // Weekly
+
+    function test_GetPaymentStatus_SuccessWhen_WeeklyIsBeforeExecuteAfter() public {
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.warp(executeAfter - 1);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Active));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_WeeklyIsAtExecuteAfter() public {
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.warp(executeAfter);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Active));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_WeeklyIsPastIntermediateWindowExpiration() public {
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.warp(executeAfter + 1 weeks + VALID_EXPIRES_AFTER);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Active));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_WeeklyIsBeforeFinalWindowExpiration() public {
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.warp(executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 weeks) + VALID_EXPIRES_AFTER - 1);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Active));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_WeeklyIsAtFinalWindowExpiration() public {
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.warp(executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 weeks) + VALID_EXPIRES_AFTER);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Completed));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_WeeklyIsPastFinalWindowExpiration() public {
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.warp(executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 weeks) + VALID_EXPIRES_AFTER + 1);
 
         IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
 
