@@ -20,7 +20,7 @@ contract GetPaymentTest is Test {
         scheduledProtocol = new ScheduledProtocol();
     }
 
-    function test_GetPayment_SuccessWhen_InvalidPaymentId() public {
+    function test_GetPayment_RevertWhen_InvalidPaymentId() public {
         vm.startPrank(payer);
 
         vm.expectRevert(abi.encodeWithSelector(IScheduledProtocol.ScheduledProtocolInvalidPaymentId.selector, 0));

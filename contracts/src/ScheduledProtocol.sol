@@ -149,7 +149,25 @@ contract ScheduledProtocol is IScheduledProtocol {
         override
         isValidPaymentId(paymentId)
         returns (PaymentStatus status)
-    {}
+    {
+        Payment storage payment = _payments[paymentId];
+        // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.
+        // forge-lint: disable-next-line(block-timestamp)
+        if (payment.recurrence == RecurrenceType.None && block.timestamp >= payment.executeAfter + payment.expiresAfter)
+        {
+            return PaymentStatus.Completed;
+        } else if (
+            // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.
+            // forge-lint: disable-next-line(block-timestamp)
+            payment.recurrence == RecurrenceType.Daily
+                && block.timestamp
+                    >= payment.executeAfter + ((payment.totalOccurrences - 1) * 1 days) + payment.expiresAfter
+        ) {
+            return PaymentStatus.Completed;
+        }
+
+        return PaymentStatus.Active;
+    }
 
     /**
      * @inheritdoc IScheduledProtocol
