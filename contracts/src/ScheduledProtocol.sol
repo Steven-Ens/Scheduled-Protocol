@@ -154,6 +154,7 @@ contract ScheduledProtocol is IScheduledProtocol {
         // forge-lint: disable-next-line(block-timestamp)
         uint256 timestamp = block.timestamp;
         Payment storage payment = _payments[paymentId];
+
         if (payment.recurrence == RecurrenceType.None && timestamp >= payment.executeAfter + payment.expiresAfter) {
             return PaymentStatus.Completed;
         } else if (
@@ -164,6 +165,13 @@ contract ScheduledProtocol is IScheduledProtocol {
         } else if (
             payment.recurrence == RecurrenceType.Weekly
                 && timestamp >= payment.executeAfter + ((payment.totalOccurrences - 1) * 1 weeks) + payment.expiresAfter
+        ) {
+            return PaymentStatus.Completed;
+        } else if (
+            payment.recurrence == RecurrenceType.Monthly
+                && timestamp
+                    >= BokkyPooBahsDateTimeLibrary.addMonths(payment.executeAfter, payment.totalOccurrences - 1)
+                        + payment.expiresAfter
         ) {
             return PaymentStatus.Completed;
         }

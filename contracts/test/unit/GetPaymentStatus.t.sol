@@ -4,7 +4,7 @@ pragma solidity 0.8.35;
 
 import {Test} from "forge-std/Test.sol";
 
-//import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts/BokkyPooBahsDateTimeLibrary.sol";
+import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts/BokkyPooBahsDateTimeLibrary.sol";
 
 import {IScheduledProtocol} from "../../src/interfaces/IScheduledProtocol.sol";
 import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
@@ -101,7 +101,9 @@ contract GetPaymentStatusTest is Test {
             VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
-        vm.warp(executeAfter + uint40(VALID_EXPIRES_AFTER) - 1);
+        uint256 finalWindowExpiration = executeAfter + uint40(VALID_EXPIRES_AFTER);
+
+        vm.warp(finalWindowExpiration - 1);
 
         IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
 
@@ -122,7 +124,9 @@ contract GetPaymentStatusTest is Test {
             VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
-        vm.warp(executeAfter + uint40(VALID_EXPIRES_AFTER));
+        uint256 finalWindowExpiration = executeAfter + uint40(VALID_EXPIRES_AFTER);
+
+        vm.warp(finalWindowExpiration);
 
         IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
 
@@ -143,7 +147,9 @@ contract GetPaymentStatusTest is Test {
             VALID_ONE_TIME_TOTAL_OCCURRENCES
         );
 
-        vm.warp(executeAfter + uint40(VALID_EXPIRES_AFTER) + 1);
+        uint256 finalWindowExpiration = executeAfter + uint40(VALID_EXPIRES_AFTER);
+
+        vm.warp(finalWindowExpiration + 1);
 
         IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
 
@@ -208,7 +214,9 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        vm.warp(executeAfter + 1 days + VALID_EXPIRES_AFTER);
+        uint256 intermediateWindowExpiration = executeAfter + 1 days + VALID_EXPIRES_AFTER;
+
+        vm.warp(intermediateWindowExpiration);
 
         IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
 
@@ -229,7 +237,10 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        vm.warp(executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 days) + VALID_EXPIRES_AFTER - 1);
+        uint256 finalWindowExpiration =
+            executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 days) + VALID_EXPIRES_AFTER;
+
+        vm.warp(finalWindowExpiration - 1);
 
         IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
 
@@ -250,7 +261,10 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        vm.warp(executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 days) + VALID_EXPIRES_AFTER);
+        uint256 finalWindowExpiration =
+            executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 days) + VALID_EXPIRES_AFTER;
+
+        vm.warp(finalWindowExpiration);
 
         IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
 
@@ -271,7 +285,10 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        vm.warp(executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 days) + VALID_EXPIRES_AFTER + 1);
+        uint256 finalWindowExpiration =
+            executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 days) + VALID_EXPIRES_AFTER;
+
+        vm.warp(finalWindowExpiration + 1);
 
         IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
 
@@ -336,7 +353,9 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        vm.warp(executeAfter + 1 weeks + VALID_EXPIRES_AFTER);
+        uint256 intermediateWindowExpiration = executeAfter + 1 weeks + VALID_EXPIRES_AFTER;
+
+        vm.warp(intermediateWindowExpiration);
 
         IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
 
@@ -357,7 +376,10 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        vm.warp(executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 weeks) + VALID_EXPIRES_AFTER - 1);
+        uint256 finalWindowExpiration =
+            executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 weeks) + VALID_EXPIRES_AFTER;
+
+        vm.warp(finalWindowExpiration - 1);
 
         IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
 
@@ -378,7 +400,10 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        vm.warp(executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 weeks) + VALID_EXPIRES_AFTER);
+        uint256 finalWindowExpiration =
+            executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 weeks) + VALID_EXPIRES_AFTER;
+
+        vm.warp(finalWindowExpiration);
 
         IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
 
@@ -399,7 +424,229 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        vm.warp(executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 weeks) + VALID_EXPIRES_AFTER + 1);
+        uint256 finalWindowExpiration =
+            executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 weeks) + VALID_EXPIRES_AFTER;
+
+        vm.warp(finalWindowExpiration + 1);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Completed));
+    }
+
+    // Monthly
+
+    function test_GetPaymentStatus_SuccessWhen_MonthlyIsBeforeExecuteAfter() public {
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.warp(executeAfter - 1);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Active));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_MonthlyIsAtExecuteAfter() public {
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        vm.warp(executeAfter);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Active));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_MonthlyIsPastIntermediateWindowExpiration() public {
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        uint256 intermediateWindowExpiration =
+            BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, 1) + VALID_EXPIRES_AFTER;
+
+        vm.warp(intermediateWindowExpiration);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Active));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_MonthlyIsBeforeFinalWindowExpiration() public {
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        uint256 finalWindowExpiration = BokkyPooBahsDateTimeLibrary.addMonths(
+            executeAfter, VALID_RECURRING_TOTAL_OCCURRENCES - 1
+        ) + VALID_EXPIRES_AFTER;
+
+        vm.warp(finalWindowExpiration - 1);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Active));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_MonthlyIsAtFinalWindowExpiration() public {
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        uint256 finalWindowExpiration = BokkyPooBahsDateTimeLibrary.addMonths(
+            executeAfter, VALID_RECURRING_TOTAL_OCCURRENCES - 1
+        ) + VALID_EXPIRES_AFTER;
+
+        vm.warp(finalWindowExpiration);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Completed));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_MonthlyIsPastFinalWindowExpiration() public {
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        uint256 finalWindowExpiration = BokkyPooBahsDateTimeLibrary.addMonths(
+            executeAfter, VALID_RECURRING_TOTAL_OCCURRENCES - 1
+        ) + VALID_EXPIRES_AFTER;
+
+        vm.warp(finalWindowExpiration + 1);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Completed));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_MonthlyClampsFinalOccurrenceToFebruary() public {
+        // January 31st, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
+
+        uint32 validRecurringTotalOccurrences = 2;
+
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            validRecurringTotalOccurrences
+        );
+
+        // February 28th, 2026 @ 10:00 UTC
+        uint256 expectedFinalOccurrenceStart = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 2, 28, 10, 0, 0);
+
+        vm.warp(expectedFinalOccurrenceStart + VALID_EXPIRES_AFTER);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Completed));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_MonthlyPreservesOriginalAnchorDay() public {
+        // April 30th, 2026 @ 10:00 UTC
+        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 30, 10, 0, 0));
+
+        uint32 validRecurringTotalOccurrences = 2;
+
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            validRecurringTotalOccurrences
+        );
+
+        // May 30th, 2026 @ 10:00 UTC
+        uint256 expectedFinalOccurrenceStart = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 5, 30, 10, 0, 0);
+
+        vm.warp(expectedFinalOccurrenceStart + VALID_EXPIRES_AFTER);
 
         IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
 
