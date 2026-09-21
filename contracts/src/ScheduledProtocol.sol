@@ -174,8 +174,15 @@ contract ScheduledProtocol is IScheduledProtocol {
                         + payment.expiresAfter
         ) {
             return PaymentStatus.Completed;
+        } else if (
+            payment.recurrence == RecurrenceType.LastOfMonth
+                && timestamp
+                    >= _lastOfMonthOccurrenceStart(
+                            BokkyPooBahsDateTimeLibrary.addMonths(payment.executeAfter, payment.totalOccurrences - 1)
+                        ) + payment.expiresAfter
+        ) {
+            return PaymentStatus.Completed;
         }
-
         return PaymentStatus.Active;
     }
 
