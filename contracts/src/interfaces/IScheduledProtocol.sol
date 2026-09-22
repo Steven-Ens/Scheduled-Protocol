@@ -109,6 +109,11 @@ interface IScheduledProtocol {
     error ScheduledProtocolInvalidPaymentStatus(PaymentStatus status);
 
     /**
+     * @dev The current occurrence's execution window has expired.
+     */
+    error ScheduledProtocolExecutionWindowExpired(uint256 occurrenceIndex);
+
+    /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
      */
     event PaymentCreated(

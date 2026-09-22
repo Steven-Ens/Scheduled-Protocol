@@ -117,9 +117,23 @@ contract ScheduledProtocol is IScheduledProtocol {
 
         // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.
         // forge-lint: disable-next-line(block-timestamp)
-        if (block.timestamp < payment.executeAfter) {
+        uint256 timestamp = block.timestamp;
+        if (timestamp < payment.executeAfter) {
             revert ScheduledProtocolExecutionNotStarted(payment.executeAfter);
         }
+
+        PaymentStatus status = _getPaymentStatus(paymentId);
+        if (status != PaymentStatus.Active) {
+            revert ScheduledProtocolInvalidPaymentStatus(status);
+        }
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            _deriveOccurrence(payment.recurrence, payment.executeAfter, timestamp);
+
+        if (timestamp >= occurrenceStart + payment.expiresAfter) {
+            revert ScheduledProtocolExecutionWindowExpired(occurrenceIndex);
+        }
+
     }
 
     /**

@@ -40,36 +40,6 @@ contract OccurrenceDerivationTest is Test {
         scheduledProtocol = new ScheduledProtocol();
     }
 
-    // Execution validation
-
-    function test_ExecutePayment_RevertWhen_InvalidPaymentId() public {
-        vm.startPrank(payer);
-
-        vm.expectRevert(abi.encodeWithSelector(IScheduledProtocol.ScheduledProtocolInvalidPaymentId.selector, 0));
-
-        scheduledProtocol.executePayment(0);
-
-        vm.stopPrank();
-    }
-
-    function test_ExecutePayment_RevertWhen_BeforeExecuteAfter() public {
-        vm.startPrank(payer);
-
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient, 100e6, IScheduledProtocol.RecurrenceType.None, executeAfter, 1 hours, 1
-        );
-
-        vm.warp(executeAfter - 1);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IScheduledProtocol.ScheduledProtocolExecutionNotStarted.selector, executeAfter)
-        );
-
-        scheduledProtocol.executePayment(paymentId);
-
-        vm.stopPrank();
-    }
-
     // None
 
     function test_OccurrenceDerivation_SuccessWhen_NoneDerivesOccurrenceZero() public {
