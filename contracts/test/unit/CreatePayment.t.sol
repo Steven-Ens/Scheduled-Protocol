@@ -392,7 +392,6 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
-
     // `expiresAfter` validation
 
     function test_CreatePayment_RevertWhen_ExpiresAfterIsZero() public {

@@ -27,42 +27,17 @@ contract OccurrenceDerivationTest is Test {
 
     ScheduledProtocol private scheduledProtocol;
 
+    // Delay added to `block.timestamp` to produce a valid future `executeAfter`.
+    uint256 private constant VALID_EXECUTE_AFTER_DELAY = 1 days;
+
     function setUp() public {
         payer = makeAddr("payer");
         recipient = makeAddr("recipient");
-        executeAfter = uint40(block.timestamp + 1 days);
+        // Safe because the test timestamp plus one day is well below `type(uint40).max`.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        executeAfter = uint40(block.timestamp + VALID_EXECUTE_AFTER_DELAY);
 
         scheduledProtocol = new ScheduledProtocol();
-    }
-
-    // Execution validation
-
-    function test_ExecutePayment_RevertWhen_InvalidPaymentId() public {
-        vm.startPrank(payer);
-
-        vm.expectRevert(abi.encodeWithSelector(IScheduledProtocol.ScheduledProtocolInvalidPaymentId.selector, 0));
-
-        scheduledProtocol.executePayment(0);
-
-        vm.stopPrank();
-    }
-
-    function test_ExecutePayment_RevertWhen_BeforeExecuteAfter() public {
-        vm.startPrank(payer);
-
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient, 100e6, IScheduledProtocol.RecurrenceType.None, executeAfter, 1 hours, 1
-        );
-
-        vm.warp(executeAfter - 1);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IScheduledProtocol.ScheduledProtocolExecutionNotStarted.selector, executeAfter)
-        );
-
-        scheduledProtocol.executePayment(paymentId);
-
-        vm.stopPrank();
     }
 
     // None

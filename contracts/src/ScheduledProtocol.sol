@@ -16,6 +16,16 @@ contract ScheduledProtocol is IScheduledProtocol {
     mapping(uint256 paymentId => Payment payment) private _payments;
 
     /**
+     * @dev Reverts if `paymentId` does not exist.
+     */
+    modifier isValidPaymentId(uint256 paymentId) {
+        if (paymentId >= _nextPaymentId) {
+            revert ScheduledProtocolInvalidPaymentId(paymentId);
+        }
+        _;
+    }
+
+    /**
      * @inheritdoc IScheduledProtocol
      */
     function createPayment(
@@ -102,41 +112,123 @@ contract ScheduledProtocol is IScheduledProtocol {
     /**
      * @inheritdoc IScheduledProtocol
      */
-    function executePayment(uint256 paymentId) external override {
-        if (paymentId >= _nextPaymentId) {
-            revert ScheduledProtocolInvalidPaymentId(paymentId);
-        }
-
+    function executePayment(uint256 paymentId) external override isValidPaymentId(paymentId) {
         Payment storage payment = _payments[paymentId];
 
         // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.
         // forge-lint: disable-next-line(block-timestamp)
-        if (block.timestamp < payment.executeAfter) {
+        uint256 timestamp = block.timestamp;
+        if (timestamp < payment.executeAfter) {
             revert ScheduledProtocolExecutionNotStarted(payment.executeAfter);
         }
+
+        PaymentStatus status = _getPaymentStatus(paymentId);
+        if (status != PaymentStatus.Active) {
+            revert ScheduledProtocolInvalidPaymentStatus(status);
+        }
+
+        (uint256 occurrenceIndex, uint256 occurrenceStart) =
+            _deriveOccurrence(payment.recurrence, payment.executeAfter, timestamp);
+
+        if (timestamp >= occurrenceStart + payment.expiresAfter) {
+            revert ScheduledProtocolExecutionWindowExpired(occurrenceIndex);
+        }
+
     }
 
     /**
      * @inheritdoc IScheduledProtocol
      */
-    function cancelPayment(uint256 paymentId) external override {}
+    function cancelPayment(uint256 paymentId) external override isValidPaymentId(paymentId) {
+        Payment storage payment = _payments[paymentId];
+        if (msg.sender != payment.payer) {
+            revert ScheduledProtocolUnauthorizedCaller(msg.sender);
+        }
+
+        PaymentStatus status = _getPaymentStatus(paymentId);
+        if (status != PaymentStatus.Active) {
+            revert ScheduledProtocolInvalidPaymentStatus(status);
+        }
+
+        payment.cancelled = true;
+        emit PaymentCancelled(paymentId);
+    }
 
     /**
      * @inheritdoc IScheduledProtocol
      */
-    function getPayment(uint256 paymentId) external view override returns (Payment memory payment) {
+    function getPayment(uint256 paymentId)
+        external
+        view
+        override
+        isValidPaymentId(paymentId)
+        returns (Payment memory payment)
+    {
         return _payments[paymentId];
     }
 
     /**
      * @inheritdoc IScheduledProtocol
      */
-    function getPaymentStatus(uint256 paymentId) external view override returns (PaymentStatus status) {}
+    function getPaymentStatus(uint256 paymentId)
+        external
+        view
+        override
+        isValidPaymentId(paymentId)
+        returns (PaymentStatus status)
+    {
+        return _getPaymentStatus(paymentId);
+    }
 
     /**
      * @inheritdoc IScheduledProtocol
      */
     function withdrawProtocolFees() external override {}
+
+    /**
+     * @dev Derives payment status from cancellation and expiration.
+     */
+    function _getPaymentStatus(uint256 paymentId) internal view returns (PaymentStatus status) {
+        Payment storage payment = _payments[paymentId];
+
+        if (payment.cancelled) {
+            return PaymentStatus.Cancelled;
+        }
+
+        // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.
+        // forge-lint: disable-next-line(block-timestamp)
+        uint256 timestamp = block.timestamp;
+        if (payment.recurrence == RecurrenceType.None && timestamp >= payment.executeAfter + payment.expiresAfter) {
+            return PaymentStatus.Completed;
+        } else if (
+            payment.recurrence == RecurrenceType.Daily
+                && timestamp >= payment.executeAfter + ((payment.totalOccurrences - 1) * 1 days) + payment.expiresAfter
+        ) {
+            return PaymentStatus.Completed;
+        } else if (
+            payment.recurrence == RecurrenceType.Weekly
+                && timestamp >= payment.executeAfter + ((payment.totalOccurrences - 1) * 1 weeks) + payment.expiresAfter
+        ) {
+            return PaymentStatus.Completed;
+        } else if (
+            payment.recurrence == RecurrenceType.Monthly
+                && timestamp
+                    >= BokkyPooBahsDateTimeLibrary.addMonths(payment.executeAfter, payment.totalOccurrences - 1)
+                        + payment.expiresAfter
+        ) {
+            return PaymentStatus.Completed;
+        } else if (
+            payment.recurrence == RecurrenceType.LastOfMonth
+                && timestamp
+                    >= _lastOfMonthOccurrenceStart(
+                            BokkyPooBahsDateTimeLibrary.addMonths(payment.executeAfter, payment.totalOccurrences - 1)
+                        ) + payment.expiresAfter
+        ) {
+            return PaymentStatus.Completed;
+        }
+
+        return PaymentStatus.Active;
+    }
 
     /**
      * @dev Derives the current `occurrenceIndex` and `occurrenceStart` for a payment schedule.
