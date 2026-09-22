@@ -52,6 +52,29 @@ contract GetPaymentStatusTest is Test {
         vm.stopPrank();
     }
 
+    // Payment cancellation validation
+
+    function test_GetPaymentStatus_SuccessWhen_PaymentIsCancelled() public {
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        scheduledProtocol.cancelPayment(paymentId);
+
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Cancelled));
+    }
+
     // None
 
     function test_GetPaymentStatus_SuccessWhen_OneTimeIsBeforeExecuteAfter() public {
@@ -844,6 +867,7 @@ contract GetPaymentStatusTest is Test {
             VALID_EXPIRES_AFTER,
             validRecurringTotalOccurrences
         );
+
         // March 28th, 2026 @ 10:00 UTC
         uint256 incorrectFinalOccurrenceStart = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 3, 28, 10, 0, 0);
 
@@ -881,6 +905,7 @@ contract GetPaymentStatusTest is Test {
             VALID_EXPIRES_AFTER,
             validRecurringTotalOccurrences
         );
+
         // May 30th, 2026 @ 10:00 UTC
         uint256 incorrectFinalOccurrenceStart = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 5, 30, 10, 0, 0);
 

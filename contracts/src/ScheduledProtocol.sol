@@ -125,7 +125,20 @@ contract ScheduledProtocol is IScheduledProtocol {
     /**
      * @inheritdoc IScheduledProtocol
      */
-    function cancelPayment(uint256 paymentId) external override {}
+    function cancelPayment(uint256 paymentId) external override isValidPaymentId(paymentId) {
+        Payment storage payment = _payments[paymentId];
+        if (msg.sender != payment.payer) {
+            revert ScheduledProtocolUnauthorizedCaller(msg.sender);
+        }
+
+        PaymentStatus status = _getPaymentStatus(paymentId);
+        if (status == PaymentStatus.Active) {
+            payment.cancelled = true;
+            emit PaymentCancelled(paymentId);
+        } else {
+            revert ScheduledProtocolInvalidPaymentStatus(status);
+        }
+    }
 
     /**
      * @inheritdoc IScheduledProtocol
@@ -150,11 +163,27 @@ contract ScheduledProtocol is IScheduledProtocol {
         isValidPaymentId(paymentId)
         returns (PaymentStatus status)
     {
+        return _getPaymentStatus(paymentId);
+    }
+
+    /**
+     * @inheritdoc IScheduledProtocol
+     */
+    function withdrawProtocolFees() external override {}
+
+    /**
+     *
+     */
+    function _getPaymentStatus(uint256 paymentId) internal view returns (PaymentStatus status) {
+        Payment storage payment = _payments[paymentId];
+
+        if (payment.cancelled) {
+            return PaymentStatus.Cancelled;
+        }
+
         // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.
         // forge-lint: disable-next-line(block-timestamp)
         uint256 timestamp = block.timestamp;
-        Payment storage payment = _payments[paymentId];
-
         if (payment.recurrence == RecurrenceType.None && timestamp >= payment.executeAfter + payment.expiresAfter) {
             return PaymentStatus.Completed;
         } else if (
@@ -183,13 +212,9 @@ contract ScheduledProtocol is IScheduledProtocol {
         ) {
             return PaymentStatus.Completed;
         }
+
         return PaymentStatus.Active;
     }
-
-    /**
-     * @inheritdoc IScheduledProtocol
-     */
-    function withdrawProtocolFees() external override {}
 
     /**
      * @dev Derives the current `occurrenceIndex` and `occurrenceStart` for a payment schedule.

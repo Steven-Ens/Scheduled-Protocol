@@ -99,6 +99,16 @@ interface IScheduledProtocol {
     error ScheduledProtocolExecutionNotStarted(uint40 executeAfter);
 
     /**
+     * @dev `caller` is not the `payer` for the payment schedule.
+     */
+    error ScheduledProtocolUnauthorizedCaller(address caller);
+
+    /**
+     * @dev Payment status is not `Active`.
+     */
+    error ScheduledProtocolInvalidPaymentStatus(PaymentStatus status);
+
+    /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
      */
     event PaymentCreated(
