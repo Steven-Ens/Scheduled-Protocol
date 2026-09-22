@@ -7,7 +7,7 @@ import {Test} from "forge-std/Test.sol";
 import {IScheduledProtocol} from "../../src/interfaces/IScheduledProtocol.sol";
 import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
 
-contract GetPaymentTest is Test {
+contract CancelPaymentTest is Test {
     address private payer;
     address private recipient;
     uint40 private executeAfter;

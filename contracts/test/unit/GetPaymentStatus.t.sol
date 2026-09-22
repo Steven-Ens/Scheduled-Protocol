@@ -9,13 +9,6 @@ import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts
 import {IScheduledProtocol} from "../../src/interfaces/IScheduledProtocol.sol";
 import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
 
-// Exposes the internal _lastOfMonthOccurrenceStart helper for testing.
-contract ScheduledProtocolHarness is ScheduledProtocol {
-    function lastOfMonthOccurrenceStart(uint256 targetMonthTimestamp) external pure returns (uint256 occurrenceStart) {
-        return _lastOfMonthOccurrenceStart(targetMonthTimestamp);
-    }
-}
-
 contract GetPaymentStatusTest is Test {
     address private payer;
     address private recipient;
@@ -68,10 +61,37 @@ contract GetPaymentStatusTest is Test {
 
         scheduledProtocol.cancelPayment(paymentId);
 
+        IScheduledProtocol.Payment memory payment = scheduledProtocol.getPayment(paymentId);
         IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
 
         vm.stopPrank();
 
+        assertTrue(payment.cancelled);
+        assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Cancelled));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_ReturnsCancelledAfterExpiration() public {
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        scheduledProtocol.cancelPayment(paymentId);
+
+        vm.warp(executeAfter + VALID_EXPIRES_AFTER);
+
+        IScheduledProtocol.Payment memory payment = scheduledProtocol.getPayment(paymentId);
+        IScheduledProtocol.PaymentStatus status = scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        assertTrue(payment.cancelled);
         assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Cancelled));
     }
 
@@ -765,7 +785,6 @@ contract GetPaymentStatusTest is Test {
     }
 
     function test_GetPaymentStatus_SuccessWhen_LastOfMonthIsBeforeFinalWindowExpiration() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
@@ -780,9 +799,9 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        uint256 finalWindowExpiration = harness.lastOfMonthOccurrenceStart(
-            BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, VALID_RECURRING_TOTAL_OCCURRENCES - 1)
-        ) + VALID_EXPIRES_AFTER;
+        // October 31st, 2026, @ 10:00 UTC
+        uint256 finalWindowExpiration =
+            BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 10, 31, 10, 0, 0) + VALID_EXPIRES_AFTER;
 
         vm.warp(finalWindowExpiration - 1);
 
@@ -794,7 +813,6 @@ contract GetPaymentStatusTest is Test {
     }
 
     function test_GetPaymentStatus_SuccessWhen_LastOfMonthIsAtFinalWindowExpiration() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
@@ -809,9 +827,9 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        uint256 finalWindowExpiration = harness.lastOfMonthOccurrenceStart(
-            BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, VALID_RECURRING_TOTAL_OCCURRENCES - 1)
-        ) + VALID_EXPIRES_AFTER;
+        // October 31st, 2026, @ 10:00 UTC
+        uint256 finalWindowExpiration =
+            BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 10, 31, 10, 0, 0) + VALID_EXPIRES_AFTER;
 
         vm.warp(finalWindowExpiration);
 
@@ -823,7 +841,6 @@ contract GetPaymentStatusTest is Test {
     }
 
     function test_GetPaymentStatus_SuccessWhen_LastOfMonthIsPastFinalWindowExpiration() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
@@ -838,9 +855,9 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        uint256 finalWindowExpiration = harness.lastOfMonthOccurrenceStart(
-            BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, VALID_RECURRING_TOTAL_OCCURRENCES - 1)
-        ) + VALID_EXPIRES_AFTER;
+        // October 31st, 2026, @ 10:00 UTC
+        uint256 finalWindowExpiration =
+            BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 10, 31, 10, 0, 0) + VALID_EXPIRES_AFTER;
 
         vm.warp(finalWindowExpiration + 1);
 

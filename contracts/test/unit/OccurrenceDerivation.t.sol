@@ -27,10 +27,15 @@ contract OccurrenceDerivationTest is Test {
 
     ScheduledProtocol private scheduledProtocol;
 
+    // Delay added to `block.timestamp` to produce a valid future `executeAfter`.
+    uint256 private constant VALID_EXECUTE_AFTER_DELAY = 1 days;
+
     function setUp() public {
         payer = makeAddr("payer");
         recipient = makeAddr("recipient");
-        executeAfter = uint40(block.timestamp + 1 days);
+        // Safe because the test timestamp plus one day is well below `type(uint40).max`.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        executeAfter = uint40(block.timestamp + VALID_EXECUTE_AFTER_DELAY);
 
         scheduledProtocol = new ScheduledProtocol();
     }

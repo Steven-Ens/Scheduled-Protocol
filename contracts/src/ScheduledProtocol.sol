@@ -16,7 +16,7 @@ contract ScheduledProtocol is IScheduledProtocol {
     mapping(uint256 paymentId => Payment payment) private _payments;
 
     /**
-     * @dev Reverts is `paymentId` does not exist.
+     * @dev Reverts if `paymentId` does not exist.
      */
     modifier isValidPaymentId(uint256 paymentId) {
         if (paymentId >= _nextPaymentId) {
@@ -132,12 +132,12 @@ contract ScheduledProtocol is IScheduledProtocol {
         }
 
         PaymentStatus status = _getPaymentStatus(paymentId);
-        if (status == PaymentStatus.Active) {
-            payment.cancelled = true;
-            emit PaymentCancelled(paymentId);
-        } else {
+        if (status != PaymentStatus.Active) {
             revert ScheduledProtocolInvalidPaymentStatus(status);
         }
+
+        payment.cancelled = true;
+        emit PaymentCancelled(paymentId);
     }
 
     /**
@@ -172,7 +172,7 @@ contract ScheduledProtocol is IScheduledProtocol {
     function withdrawProtocolFees() external override {}
 
     /**
-     *
+     * @dev Derives payment status from cancellation and expiration.
      */
     function _getPaymentStatus(uint256 paymentId) internal view returns (PaymentStatus status) {
         Payment storage payment = _payments[paymentId];
