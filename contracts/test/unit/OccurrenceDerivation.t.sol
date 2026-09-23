@@ -21,23 +21,14 @@ contract ScheduledProtocolHarness is ScheduledProtocol {
 }
 
 contract OccurrenceDerivationTest is Test {
-    address private payer;
-    address private recipient;
     uint40 private executeAfter;
-
-    ScheduledProtocol private scheduledProtocol;
-
     // Delay added to `block.timestamp` to produce a valid future `executeAfter`.
     uint256 private constant VALID_EXECUTE_AFTER_DELAY = 1 days;
 
     function setUp() public {
-        payer = makeAddr("payer");
-        recipient = makeAddr("recipient");
         // Safe because the test timestamp plus one day is well below `type(uint40).max`.
         // forge-lint: disable-next-line(unsafe-typecast)
         executeAfter = uint40(block.timestamp + VALID_EXECUTE_AFTER_DELAY);
-
-        scheduledProtocol = new ScheduledProtocol();
     }
 
     // None

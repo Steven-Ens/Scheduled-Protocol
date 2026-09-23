@@ -114,7 +114,6 @@ contract ScheduledProtocol is IScheduledProtocol {
      */
     function executePayment(uint256 paymentId) external override isValidPaymentId(paymentId) {
         Payment storage payment = _payments[paymentId];
-
         // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.
         // forge-lint: disable-next-line(block-timestamp)
         uint256 timestamp = block.timestamp;
@@ -133,7 +132,6 @@ contract ScheduledProtocol is IScheduledProtocol {
         if (timestamp >= occurrenceStart + payment.expiresAfter) {
             revert ScheduledProtocolExecutionWindowExpired(occurrenceIndex);
         }
-
     }
 
     /**
@@ -244,8 +242,8 @@ contract ScheduledProtocol is IScheduledProtocol {
             occurrenceIndex = (timestamp - executeAfter) / 1 days;
             occurrenceStart = executeAfter + occurrenceIndex * 1 days;
         } else if (recurrence == RecurrenceType.Weekly) {
-            occurrenceIndex = (timestamp - executeAfter) / 7 days;
-            occurrenceStart = executeAfter + occurrenceIndex * 7 days;
+            occurrenceIndex = (timestamp - executeAfter) / 1 weeks;
+            occurrenceStart = executeAfter + occurrenceIndex * 1 weeks;
         } else if (recurrence == RecurrenceType.Monthly) {
             occurrenceIndex = BokkyPooBahsDateTimeLibrary.diffMonths(executeAfter, timestamp);
             occurrenceStart = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
