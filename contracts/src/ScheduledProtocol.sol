@@ -242,8 +242,8 @@ contract ScheduledProtocol is IScheduledProtocol {
             occurrenceIndex = (timestamp - executeAfter) / 1 days;
             occurrenceStart = executeAfter + occurrenceIndex * 1 days;
         } else if (recurrence == RecurrenceType.Weekly) {
-            occurrenceIndex = (timestamp - executeAfter) / 7 days;
-            occurrenceStart = executeAfter + occurrenceIndex * 7 days;
+            occurrenceIndex = (timestamp - executeAfter) / 1 weeks;
+            occurrenceStart = executeAfter + occurrenceIndex * 1 weeks;
         } else if (recurrence == RecurrenceType.Monthly) {
             occurrenceIndex = BokkyPooBahsDateTimeLibrary.diffMonths(executeAfter, timestamp);
             occurrenceStart = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);

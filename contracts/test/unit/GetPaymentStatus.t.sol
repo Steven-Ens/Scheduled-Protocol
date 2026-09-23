@@ -70,7 +70,7 @@ contract GetPaymentStatusTest is Test {
         assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Cancelled));
     }
 
-    function test_GetPaymentStatus_SuccessWhen_ReturnsCancelledAfterExpiration() public {
+    function test_GetPaymentStatus_SuccessWhen_ReturnsCancelledAtFinalWindowExpiration() public {
         vm.startPrank(payer);
 
         uint256 paymentId = scheduledProtocol.createPayment(
