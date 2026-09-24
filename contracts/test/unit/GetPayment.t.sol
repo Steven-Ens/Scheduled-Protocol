@@ -4,6 +4,8 @@ pragma solidity 0.8.35;
 
 import {Test} from "forge-std/Test.sol";
 
+import {MockUSDC} from "../mocks/MockUSDC.sol";
+
 import {IScheduledProtocol} from "../../src/interfaces/IScheduledProtocol.sol";
 import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
 
@@ -12,6 +14,7 @@ contract GetPaymentTest is Test {
     address private recipient;
     uint40 private executeAfter;
 
+    MockUSDC private mockUSDC;
     ScheduledProtocol private scheduledProtocol;
 
     uint96 private constant VALID_AMOUNT = 100e6;
@@ -27,7 +30,8 @@ contract GetPaymentTest is Test {
         // forge-lint: disable-next-line(unsafe-typecast)
         executeAfter = uint40(block.timestamp + VALID_EXECUTE_AFTER_DELAY);
 
-        scheduledProtocol = new ScheduledProtocol();
+        mockUSDC = new MockUSDC();
+        scheduledProtocol = new ScheduledProtocol(mockUSDC);
     }
 
     function test_GetPayment_RevertWhen_InvalidPaymentId() public {

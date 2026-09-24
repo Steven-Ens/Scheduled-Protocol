@@ -114,6 +114,11 @@ interface IScheduledProtocol {
     error ScheduledProtocolExecutionWindowExpired(uint256 occurrenceIndex);
 
     /**
+     * @dev The current occurrence has already been executed.
+     */
+    error ScheduledProtocolOccurrenceAlreadyExecuted(uint256 occurrenceIndex);
+
+    /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
      */
     event PaymentCreated(
@@ -130,7 +135,7 @@ interface IScheduledProtocol {
     /**
      * @dev Emitted when occurrence `occurrenceIndex` of payment schedule `paymentId` is successfully executed.
      */
-    event PaymentExecuted(uint256 indexed paymentId, uint32 indexed occurrenceIndex, address indexed executor);
+    event PaymentExecuted(uint256 indexed paymentId, uint256 indexed occurrenceIndex, address indexed executor);
 
     /**
      * @dev Emitted when payment schedule `paymentId` is cancelled by its payer.
@@ -173,12 +178,17 @@ interface IScheduledProtocol {
     /**
      * @dev Returns payment schedule `paymentId`.
      */
-    function getPayment(uint256 paymentId) external view returns (Payment memory payment);
+    function getPayment(uint256 paymentId) external view returns (Payment memory);
 
     /**
      * @dev Returns the current lifecycle state of payment schedule `paymentId`.
      */
-    function getPaymentStatus(uint256 paymentId) external view returns (PaymentStatus status);
+    function getPaymentStatus(uint256 paymentId) external view returns (PaymentStatus);
+
+    /**
+     * @dev Returns the accumulated protocol fees available for withdrawal.
+     */
+    function getAccumulatedProtocolFees() external view returns (uint256);
 
     /**
      * @dev Withdraws accumulated protocol fees to the owner.

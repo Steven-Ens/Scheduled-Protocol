@@ -2,6 +2,9 @@
 
 pragma solidity 0.8.35;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts/BokkyPooBahsDateTimeLibrary.sol";
 
 import {IScheduledProtocol} from "./interfaces/IScheduledProtocol.sol";
@@ -10,6 +13,14 @@ import {IScheduledProtocol} from "./interfaces/IScheduledProtocol.sol";
  * @dev Core implementation of Scheduled Protocol.
  */
 contract ScheduledProtocol is IScheduledProtocol {
+    using SafeERC20 for IERC20;
+
+    IERC20 private immutable USDC;
+    // 0.80 in USDC
+    uint256 private constant EXECUTOR_FEE = 800_000;
+    // 0.20 in USDC
+    uint256 private constant PROTOCOL_FEE = 200_000;
+
     uint256 private _nextPaymentId;
     uint256 private _accumulatedProtocolFees;
 
@@ -23,6 +34,13 @@ contract ScheduledProtocol is IScheduledProtocol {
             revert ScheduledProtocolInvalidPaymentId(paymentId);
         }
         _;
+    }
+
+    /**
+     * @dev Sets the USDC token used for payment settlement.
+     */
+    constructor(IERC20 usdc_) {
+        USDC = usdc_;
     }
 
     /**
@@ -132,6 +150,27 @@ contract ScheduledProtocol is IScheduledProtocol {
         if (timestamp >= occurrenceStart + payment.expiresAfter) {
             revert ScheduledProtocolExecutionWindowExpired(occurrenceIndex);
         }
+
+        if (payment.lastExecutedOccurrencePlusOne == occurrenceIndex + 1) {
+            revert ScheduledProtocolOccurrenceAlreadyExecuted(occurrenceIndex);
+        }
+
+        // Effects are applied before external calls per checks-effects-interactions.
+
+        // Safe because `occurrenceIndex` is always less than the `uint32` `totalOccurrences` count, so casting it and
+        // adding one cannot exceed `type(uint32).max`.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        payment.lastExecutedOccurrencePlusOne = uint32(occurrenceIndex) + 1;
+        _accumulatedProtocolFees += PROTOCOL_FEE;
+
+        // Principal
+        USDC.safeTransferFrom(payment.payer, payment.recipient, payment.amount);
+        // Executor fee
+        USDC.safeTransferFrom(payment.payer, msg.sender, EXECUTOR_FEE);
+        // Protocol fee
+        USDC.safeTransferFrom(payment.payer, address(this), PROTOCOL_FEE);
+
+        emit PaymentExecuted(paymentId, occurrenceIndex, msg.sender);
     }
 
     /**
@@ -155,13 +194,7 @@ contract ScheduledProtocol is IScheduledProtocol {
     /**
      * @inheritdoc IScheduledProtocol
      */
-    function getPayment(uint256 paymentId)
-        external
-        view
-        override
-        isValidPaymentId(paymentId)
-        returns (Payment memory payment)
-    {
+    function getPayment(uint256 paymentId) external view override isValidPaymentId(paymentId) returns (Payment memory) {
         return _payments[paymentId];
     }
 
@@ -173,9 +206,16 @@ contract ScheduledProtocol is IScheduledProtocol {
         view
         override
         isValidPaymentId(paymentId)
-        returns (PaymentStatus status)
+        returns (PaymentStatus)
     {
         return _getPaymentStatus(paymentId);
+    }
+
+    /**
+     * @inheritdoc IScheduledProtocol
+     */
+    function getAccumulatedProtocolFees() external view override returns (uint256) {
+        return _accumulatedProtocolFees;
     }
 
     /**
@@ -191,6 +231,10 @@ contract ScheduledProtocol is IScheduledProtocol {
 
         if (payment.cancelled) {
             return PaymentStatus.Cancelled;
+        }
+
+        if (payment.lastExecutedOccurrencePlusOne == payment.totalOccurrences) {
+            return PaymentStatus.Completed;
         }
 
         // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.

@@ -6,6 +6,8 @@ import {Test} from "forge-std/Test.sol";
 
 import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts/BokkyPooBahsDateTimeLibrary.sol";
 
+import {MockUSDC} from "../mocks/MockUSDC.sol";
+
 import {IScheduledProtocol} from "../../src/interfaces/IScheduledProtocol.sol";
 import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
 
@@ -14,6 +16,7 @@ contract CreatePaymentTest is Test {
     address private recipient;
     uint40 private executeAfter;
 
+    MockUSDC private mockUSDC;
     ScheduledProtocol private scheduledProtocol;
 
     uint96 private constant MIN_VALID_AMOUNT = 1;
@@ -44,7 +47,8 @@ contract CreatePaymentTest is Test {
         // forge-lint: disable-next-line(unsafe-typecast)
         executeAfter = uint40(block.timestamp + VALID_EXECUTE_AFTER_DELAY);
 
-        scheduledProtocol = new ScheduledProtocol();
+        mockUSDC = new MockUSDC();
+        scheduledProtocol = new ScheduledProtocol(mockUSDC);
     }
 
     // Payment creation

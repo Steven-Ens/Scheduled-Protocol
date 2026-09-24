@@ -6,14 +6,18 @@ import {Test} from "forge-std/Test.sol";
 
 import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts/BokkyPooBahsDateTimeLibrary.sol";
 
+import {MockUSDC} from "../mocks/MockUSDC.sol";
+
 import {IScheduledProtocol} from "../../src/interfaces/IScheduledProtocol.sol";
 import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
 
 contract ExecutionEligibilityTest is Test {
     address private payer;
     address private recipient;
+    address private executor;
     uint40 private executeAfter;
 
+    MockUSDC private mockUSDC;
     ScheduledProtocol private scheduledProtocol;
 
     uint96 private constant VALID_AMOUNT = 100e6;
@@ -23,14 +27,26 @@ contract ExecutionEligibilityTest is Test {
     uint32 private constant VALID_ONE_TIME_TOTAL_OCCURRENCES = 1;
     uint32 private constant VALID_RECURRING_TOTAL_OCCURRENCES = 10;
 
+    // 0.80 USDC
+    uint256 private constant EXECUTOR_FEE = 800_000;
+    // 0.20 USDC
+    uint256 private constant PROTOCOL_FEE = 200_000;
+
     function setUp() public {
         payer = makeAddr("payer");
         recipient = makeAddr("recipient");
+        executor = makeAddr("executor");
         // Safe because the test timestamp plus one day is well below `type(uint40).max`.
         // forge-lint: disable-next-line(unsafe-typecast)
         executeAfter = uint40(block.timestamp + VALID_EXECUTE_AFTER_DELAY);
 
-        scheduledProtocol = new ScheduledProtocol();
+        mockUSDC = new MockUSDC();
+        scheduledProtocol = new ScheduledProtocol(mockUSDC);
+
+        vm.startPrank(payer);
+        mockUSDC.mint(payer, VALID_AMOUNT + EXECUTOR_FEE + PROTOCOL_FEE);
+        mockUSDC.approve(address(scheduledProtocol), VALID_AMOUNT + EXECUTOR_FEE + PROTOCOL_FEE);
+        vm.stopPrank();
     }
 
     // Execution validation
@@ -63,6 +79,10 @@ contract ExecutionEligibilityTest is Test {
             abi.encodeWithSelector(IScheduledProtocol.ScheduledProtocolExecutionNotStarted.selector, executeAfter)
         );
 
+        vm.stopPrank();
+
+        vm.startPrank(executor);
+
         scheduledProtocol.executePayment(paymentId);
 
         vm.stopPrank();
@@ -91,6 +111,10 @@ contract ExecutionEligibilityTest is Test {
             )
         );
 
+        vm.stopPrank();
+
+        vm.startPrank(executor);
+
         scheduledProtocol.executePayment(paymentId);
 
         vm.stopPrank();
@@ -117,6 +141,10 @@ contract ExecutionEligibilityTest is Test {
             )
         );
 
+        vm.stopPrank();
+
+        vm.startPrank(executor);
+
         scheduledProtocol.executePayment(paymentId);
 
         vm.stopPrank();
@@ -136,6 +164,10 @@ contract ExecutionEligibilityTest is Test {
 
         vm.warp(executeAfter);
 
+        vm.stopPrank();
+
+        vm.startPrank(executor);
+
         scheduledProtocol.executePayment(paymentId);
 
         vm.stopPrank();
@@ -154,6 +186,10 @@ contract ExecutionEligibilityTest is Test {
         );
 
         vm.warp(executeAfter + VALID_EXPIRES_AFTER - 1);
+
+        vm.stopPrank();
+
+        vm.startPrank(executor);
 
         scheduledProtocol.executePayment(paymentId);
 
@@ -176,6 +212,10 @@ contract ExecutionEligibilityTest is Test {
 
         vm.expectRevert(abi.encodeWithSelector(IScheduledProtocol.ScheduledProtocolExecutionWindowExpired.selector, 0));
 
+        vm.stopPrank();
+
+        vm.startPrank(executor);
+
         scheduledProtocol.executePayment(paymentId);
 
         vm.stopPrank();
@@ -194,6 +234,10 @@ contract ExecutionEligibilityTest is Test {
         );
 
         vm.warp(executeAfter + 1 days);
+
+        vm.stopPrank();
+
+        vm.startPrank(executor);
 
         scheduledProtocol.executePayment(paymentId);
 
@@ -217,9 +261,14 @@ contract ExecutionEligibilityTest is Test {
 
         // May 30, 2026 @ 10:00 UTC
         uint256 invalidExecutionWindow = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 5, 30, 10, 0, 0);
+
         vm.warp(invalidExecutionWindow);
 
         vm.expectRevert(abi.encodeWithSelector(IScheduledProtocol.ScheduledProtocolExecutionWindowExpired.selector, 0));
+
+        vm.stopPrank();
+
+        vm.startPrank(executor);
 
         scheduledProtocol.executePayment(paymentId);
 

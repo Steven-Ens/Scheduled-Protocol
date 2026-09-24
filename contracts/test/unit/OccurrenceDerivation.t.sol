@@ -6,11 +6,17 @@ import {Test} from "forge-std/Test.sol";
 
 import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts/BokkyPooBahsDateTimeLibrary.sol";
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import {MockUSDC} from "../mocks/MockUSDC.sol";
+
 import {IScheduledProtocol} from "../../src/interfaces/IScheduledProtocol.sol";
 import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
 
 // Exposes the internal _deriveOccurrence helper for testing.
 contract ScheduledProtocolHarness is ScheduledProtocol {
+    constructor(IERC20 usdc_) ScheduledProtocol(usdc_) {}
+
     function deriveOccurrence(RecurrenceType recurrence, uint40 executeAfter, uint256 timestamp)
         external
         pure
@@ -25,17 +31,21 @@ contract OccurrenceDerivationTest is Test {
     // Delay added to `block.timestamp` to produce a valid future `executeAfter`.
     uint256 private constant VALID_EXECUTE_AFTER_DELAY = 1 days;
 
+    MockUSDC private mockUSDC;
+    ScheduledProtocolHarness harness;
+
     function setUp() public {
         // Safe because the test timestamp plus one day is well below `type(uint40).max`.
         // forge-lint: disable-next-line(unsafe-typecast)
         executeAfter = uint40(block.timestamp + VALID_EXECUTE_AFTER_DELAY);
+
+        mockUSDC = new MockUSDC();
+        harness = new ScheduledProtocolHarness(mockUSDC);
     }
 
     // None
 
-    function test_OccurrenceDerivation_SuccessWhen_NoneDerivesOccurrenceZero() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
+    function test_OccurrenceDerivation_SuccessWhen_NoneDerivesOccurrenceZero() public view {
         uint256 timestamp = uint256(executeAfter);
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -45,9 +55,7 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, executeAfter);
     }
 
-    function test_OccurrenceDerivation_SuccessWhen_NoneRemainsAtOccurrenceZero() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
+    function test_OccurrenceDerivation_SuccessWhen_NoneRemainsAtOccurrenceZero() public view {
         uint256 timestamp = uint256(executeAfter) + 100 days;
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -59,9 +67,7 @@ contract OccurrenceDerivationTest is Test {
 
     // Daily
 
-    function test_OccurrenceDerivation_SuccessWhen_DailyIsAtFirstOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
+    function test_OccurrenceDerivation_SuccessWhen_DailyIsAtFirstOccurrence() public view {
         uint256 timestamp = uint256(executeAfter);
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -71,9 +77,7 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, uint256(executeAfter));
     }
 
-    function test_OccurrenceDerivation_SuccessWhen_DailyIsWithinFirstOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
+    function test_OccurrenceDerivation_SuccessWhen_DailyIsWithinFirstOccurrence() public view {
         uint256 timestamp = uint256(executeAfter) + 12 hours;
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -83,9 +87,7 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, uint256(executeAfter));
     }
 
-    function test_OccurrenceDerivation_SuccessWhen_DailyIsAtEndOfFirstOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
+    function test_OccurrenceDerivation_SuccessWhen_DailyIsAtEndOfFirstOccurrence() public view {
         uint256 timestamp = uint256(executeAfter) + 1 days - 1;
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -95,9 +97,7 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, uint256(executeAfter));
     }
 
-    function test_OccurrenceDerivation_SuccessWhen_DailyIsAtSecondOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
+    function test_OccurrenceDerivation_SuccessWhen_DailyIsAtSecondOccurrence() public view {
         uint256 timestamp = uint256(executeAfter) + 1 days;
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -107,9 +107,7 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, uint256(executeAfter) + 1 days);
     }
 
-    function test_OccurrenceDerivation_SuccessWhen_DailyIsWithinLaterOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
+    function test_OccurrenceDerivation_SuccessWhen_DailyIsWithinLaterOccurrence() public view {
         uint256 timestamp = uint256(executeAfter) + 3 days + 12 hours;
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -121,9 +119,7 @@ contract OccurrenceDerivationTest is Test {
 
     // Weekly
 
-    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsAtFirstOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
+    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsAtFirstOccurrence() public view {
         uint256 timestamp = uint256(executeAfter);
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -133,9 +129,7 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, uint256(executeAfter));
     }
 
-    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsWithinFirstOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
+    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsWithinFirstOccurrence() public view {
         uint256 timestamp = uint256(executeAfter) + 3 days + 12 hours;
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -145,9 +139,7 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, uint256(executeAfter));
     }
 
-    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsAtEndOfFirstOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
+    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsAtEndOfFirstOccurrence() public view {
         uint256 timestamp = uint256(executeAfter) + 1 weeks - 1;
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -157,9 +149,7 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, uint256(executeAfter));
     }
 
-    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsAtSecondOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
+    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsAtSecondOccurrence() public view {
         uint256 timestamp = uint256(executeAfter) + 1 weeks;
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -169,9 +159,7 @@ contract OccurrenceDerivationTest is Test {
         assertEq(occurrenceStart, uint256(executeAfter) + 1 weeks);
     }
 
-    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsWithinLaterOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
+    function test_OccurrenceDerivation_SuccessWhen_WeeklyIsWithinLaterOccurrence() public view {
         uint256 timestamp = uint256(executeAfter) + 3 weeks + 3 days;
 
         (uint256 occurrenceIndex, uint256 occurrenceStart) =
@@ -184,8 +172,6 @@ contract OccurrenceDerivationTest is Test {
     // Monthly
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyIsAtFirstOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 15th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 15, 10, 0, 0));
 
@@ -199,8 +185,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyIsWithinFirstOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 15th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 15, 10, 0, 0));
 
@@ -215,8 +199,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyIsAtEndOfFirstOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 15th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 15, 10, 0, 0));
 
@@ -231,8 +213,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyIsAtSecondOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 15th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 15, 10, 0, 0));
 
@@ -247,8 +227,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyIsWithinLaterOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 15th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 15, 10, 0, 0));
 
@@ -266,8 +244,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyIsBeforeClampedOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
@@ -282,8 +258,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyCorrectsFutureCandidateOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
@@ -301,8 +275,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyClampsToFebruaryInNonLeapYear() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
@@ -317,8 +289,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyClampsToFebruaryInLeapYear() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 31st, 2028 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2028, 1, 31, 10, 0, 0));
 
@@ -333,8 +303,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyRestoresOriginalAnchorDay() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
@@ -349,8 +317,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyPreservesOriginalAnchorDay() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // April 30th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 30, 10, 0, 0));
 
@@ -365,8 +331,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyPreservesOriginalAnchorTime() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 31st, 2026 @ 12:34:56 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 12, 34, 56));
 
@@ -381,8 +345,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_MonthlyCrossesYear() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // December 15th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 12, 15, 10, 0, 0));
 
@@ -399,8 +361,6 @@ contract OccurrenceDerivationTest is Test {
     // LastOfMonth
 
     function test_OccurrenceDerivation_SuccessWhen_LastOfMonthIsAtFirstOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
@@ -414,8 +374,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_LastOfMonthIsWithinFirstOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
@@ -430,8 +388,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_LastOfMonthIsAtEndOfFirstOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
@@ -446,8 +402,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_LastOfMonthIsAtSecondOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
@@ -462,8 +416,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_LastOfMonthIsWithinLaterOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
@@ -481,8 +433,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_LastOfMonthCorrectsFutureCandidateOccurrence() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // April 30th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 30, 10, 0, 0));
 
@@ -497,8 +447,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_LastOfMonthUsesLeapDay() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // January 31st, 2028 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2028, 1, 31, 10, 0, 0));
 
@@ -513,8 +461,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_LastOfMonthAdvancesFromFebruaryToMarch() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // February 28th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 2, 28, 10, 0, 0));
 
@@ -529,8 +475,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_LastOfMonthAdvancesToFinalDay() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // April 30th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 30, 10, 0, 0));
 
@@ -545,8 +489,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_LastOfMonthPreservesOriginalAnchorTime() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // February 28th, 2026 @ 12:34:56 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 2, 28, 12, 34, 56));
 
@@ -561,8 +503,6 @@ contract OccurrenceDerivationTest is Test {
     }
 
     function test_OccurrenceDerivation_SuccessWhen_LastOfMonthCrossesYear() public {
-        ScheduledProtocolHarness harness = new ScheduledProtocolHarness();
-
         // December 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 12, 31, 10, 0, 0));
 
