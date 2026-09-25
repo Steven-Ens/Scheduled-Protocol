@@ -119,6 +119,16 @@ interface IScheduledProtocol {
     error ScheduledProtocolOccurrenceAlreadyExecuted(uint256 occurrenceIndex);
 
     /**
+     * @dev Reverts when a call is made to `renounceOwnership`.
+     */
+    error ScheduledProtocolOwnershipRenunciationDisabled();
+
+    /**
+     * @dev Reverts when `_accumulatedProtocolFees` is zero and a withdrawal is attempted.
+     */
+    error ScheduledProtocolNoProtocolFeesAccumulated();
+
+    /**
      * @dev Emitted when payment schedule `paymentId` is created by `payer`.
      */
     event PaymentCreated(

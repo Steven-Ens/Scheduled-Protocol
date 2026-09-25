@@ -5,6 +5,9 @@ pragma solidity 0.8.35;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+
 import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts/BokkyPooBahsDateTimeLibrary.sol";
 
 import {IScheduledProtocol} from "./interfaces/IScheduledProtocol.sol";
@@ -12,7 +15,7 @@ import {IScheduledProtocol} from "./interfaces/IScheduledProtocol.sol";
 /**
  * @dev Core implementation of Scheduled Protocol.
  */
-contract ScheduledProtocol is IScheduledProtocol {
+contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
     using SafeERC20 for IERC20;
 
     IERC20 private immutable USDC;
@@ -39,7 +42,7 @@ contract ScheduledProtocol is IScheduledProtocol {
     /**
      * @dev Sets the USDC token used for payment settlement.
      */
-    constructor(IERC20 usdc_) {
+    constructor(IERC20 usdc_) Ownable(msg.sender) {
         USDC = usdc_;
     }
 
@@ -221,7 +224,26 @@ contract ScheduledProtocol is IScheduledProtocol {
     /**
      * @inheritdoc IScheduledProtocol
      */
-    function withdrawProtocolFees() external override {}
+    function withdrawProtocolFees() external override onlyOwner {
+        uint256 accumulatedProtocolFees = _accumulatedProtocolFees;
+
+        if (accumulatedProtocolFees == 0) {
+            revert ScheduledProtocolNoProtocolFeesAccumulated();
+        }
+
+        delete _accumulatedProtocolFees;
+
+        USDC.safeTransfer(owner(), accumulatedProtocolFees);
+
+        emit ProtocolFeesWithdrawn(owner(), accumulatedProtocolFees);
+    }
+
+    /**
+     * @dev Ownership renunciation is disabled to prevent the protocol from becoming ownerless.
+     */
+    function renounceOwnership() public pure override {
+        revert ScheduledProtocolOwnershipRenunciationDisabled();
+    }
 
     /**
      * @dev Derives payment status from cancellation and expiration.

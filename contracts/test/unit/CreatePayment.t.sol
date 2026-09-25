@@ -770,6 +770,8 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
+    // Helpers
+
     function _recurringTypes() private pure returns (IScheduledProtocol.RecurrenceType[4] memory recurringTypes) {
         recurringTypes = [
             IScheduledProtocol.RecurrenceType.Daily,
