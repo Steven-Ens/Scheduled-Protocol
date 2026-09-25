@@ -435,6 +435,8 @@ contract ExecutePaymentTest is Test {
         assertEq(payment.lastExecutedOccurrencePlusOne, 1);
     }
 
+    // Helpers
+
     function _createOneTimePayment() private returns (uint256 paymentId) {
         paymentId = scheduledProtocol.createPayment(
             recipient,
