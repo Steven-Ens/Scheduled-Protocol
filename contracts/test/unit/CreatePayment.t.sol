@@ -643,7 +643,7 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
-    function test_CreatePayment_SuccessWhen_NoneHasOneTotalOccurrences() public {
+    function test_CreatePayment_SuccessWhen_NoneHasOneTotalOccurrence() public {
         vm.startPrank(payer);
 
         scheduledProtocol.createPayment(
@@ -699,7 +699,7 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
-    function test_CreatePayment_RevertWhen_RecurringHasOneTotalOccurrences() public {
+    function test_CreatePayment_RevertWhen_RecurringHasOneTotalOccurrence() public {
         IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
 
         // January 31st, 2026 @ 10:00 UTC

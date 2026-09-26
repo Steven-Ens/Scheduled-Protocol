@@ -74,7 +74,7 @@ contract GetPaymentStatusTest is Test {
         assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Cancelled));
     }
 
-    function test_GetPaymentStatus_SuccessWhen_ReturnsCancelledAtFinalWindowExpiration() public {
+    function test_GetPaymentStatus_SuccessWhen_PaymentRemainsCancelledAtFinalWindowExpiration() public {
         vm.startPrank(payer);
 
         uint256 paymentId = scheduledProtocol.createPayment(
@@ -803,7 +803,7 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        // October 31st, 2026, @ 10:00 UTC
+        // October 31st, 2026 @ 10:00 UTC
         uint256 finalWindowExpiration =
             BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 10, 31, 10, 0, 0) + VALID_EXPIRES_AFTER;
 
@@ -831,7 +831,7 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        // October 31st, 2026, @ 10:00 UTC
+        // October 31st, 2026 @ 10:00 UTC
         uint256 finalWindowExpiration =
             BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 10, 31, 10, 0, 0) + VALID_EXPIRES_AFTER;
 
@@ -859,7 +859,7 @@ contract GetPaymentStatusTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        // October 31st, 2026, @ 10:00 UTC
+        // October 31st, 2026 @ 10:00 UTC
         uint256 finalWindowExpiration =
             BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 10, 31, 10, 0, 0) + VALID_EXPIRES_AFTER;
 

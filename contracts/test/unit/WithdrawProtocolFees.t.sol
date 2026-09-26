@@ -50,8 +50,9 @@ contract WithdrawProtocolFeesTest is Test {
         // forge-lint: disable-next-line(unsafe-typecast)
         executeAfter = uint40(block.timestamp + VALID_EXECUTE_AFTER_DELAY);
 
-        vm.startPrank(owner);
         mockUSDC = new MockUSDC();
+
+        vm.startPrank(owner);
         scheduledProtocol = new ScheduledProtocol(mockUSDC);
         vm.stopPrank();
 

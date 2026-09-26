@@ -245,7 +245,7 @@ contract ExecutionEligibilityTest is Test {
     }
 
     function test_ExecutePayment_RevertWhen_BeforeLastOfMonthOccurrenceStart() public {
-        // April 30, 2026 @ 10:00 UTC
+        // April 30th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 30, 10, 0, 0));
 
         vm.startPrank(payer);
@@ -259,7 +259,7 @@ contract ExecutionEligibilityTest is Test {
             VALID_RECURRING_TOTAL_OCCURRENCES
         );
 
-        // May 30, 2026 @ 10:00 UTC
+        // May 30th, 2026 @ 10:00 UTC
         uint256 invalidExecutionWindow = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 5, 30, 10, 0, 0);
 
         vm.warp(invalidExecutionWindow);

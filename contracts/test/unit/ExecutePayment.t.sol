@@ -186,7 +186,7 @@ contract ExecutePaymentTest is Test {
     function test_ExecutePayment_RevertWhen_OccurrenceAlreadyExecuted() public {
         vm.startPrank(payer);
 
-        // Enough funds and approval to call executePayment twice
+        // Enough funds and approval to call executePayment twice.
         mockUSDC.mint(payer, TOTAL_REQUIRED_AMOUNT);
         mockUSDC.approve(address(scheduledProtocol), TOTAL_REQUIRED_AMOUNT * 2);
 

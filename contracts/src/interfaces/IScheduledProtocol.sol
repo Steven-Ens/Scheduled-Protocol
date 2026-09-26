@@ -119,12 +119,12 @@ interface IScheduledProtocol {
     error ScheduledProtocolOccurrenceAlreadyExecuted(uint256 occurrenceIndex);
 
     /**
-     * @dev Reverts when a call is made to `renounceOwnership`.
+     * @dev Ownership renunciation is disabled.
      */
     error ScheduledProtocolOwnershipRenunciationDisabled();
 
     /**
-     * @dev Reverts when `_accumulatedProtocolFees` is zero and a withdrawal is attempted.
+     * @dev No accumulated protocol fees are available for withdrawal.
      */
     error ScheduledProtocolNoProtocolFeesAccumulated();
 

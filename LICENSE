@@ -2,7 +2,8 @@
 
 Scheduled Protocol uses multiple licenses.
 
-1. Core Scheduled Protocol smart contract implementation: Business Source License 1.1 (BUSL-1.1), with MIT as the Change License.
+1. Core Scheduled Protocol smart contract implementation: Business Source License 1.1 (BUSL-1.1), with MIT as the
+Change License.
 
 2. Interfaces, frontend, executor, documentation, and other non-core components: MIT License.
 

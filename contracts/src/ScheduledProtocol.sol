@@ -19,9 +19,9 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
     using SafeERC20 for IERC20;
 
     IERC20 private immutable USDC;
-    // 0.80 in USDC
+    // 0.80 USDC
     uint256 private constant EXECUTOR_FEE = 800_000;
-    // 0.20 in USDC
+    // 0.20 USDC
     uint256 private constant PROTOCOL_FEE = 200_000;
 
     uint256 private _nextPaymentId;
@@ -40,7 +40,7 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
     }
 
     /**
-     * @dev Sets the USDC token used for payment settlement.
+     * @dev Sets the USDC token used for payment settlement, and the initial owner as the deployer.
      */
     constructor(IERC20 usdc_) Ownable(msg.sender) {
         USDC = usdc_;
@@ -246,7 +246,7 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
     }
 
     /**
-     * @dev Derives payment status from cancellation and expiration.
+     * @dev Derives payment status from cancellation, execution progress, and expiration.
      */
     function _getPaymentStatus(uint256 paymentId) internal view returns (PaymentStatus status) {
         Payment storage payment = _payments[paymentId];
@@ -295,7 +295,8 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
     }
 
     /**
-     * @dev Derives the current `occurrenceIndex` and `occurrenceStart` for a payment schedule.
+     * @dev Derives the current `occurrenceIndex` and `occurrenceStart` for a payment schedule. Assumes `timestamp` is
+     * greater than or equal to `payment.executeAfter`.
      */
     function _deriveOccurrence(RecurrenceType recurrence, uint40 executeAfter, uint256 timestamp)
         internal
