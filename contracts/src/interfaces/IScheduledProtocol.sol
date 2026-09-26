@@ -52,6 +52,11 @@ interface IScheduledProtocol {
     }
 
     /**
+     * @dev `usdc_` is the zero address.
+     */
+    error ScheduledProtocolInvalidUSDCAddress();
+
+    /**
      * @dev `recipient` is the zero address.
      */
     error ScheduledProtocolInvalidRecipient(address recipient);

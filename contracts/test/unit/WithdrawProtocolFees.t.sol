@@ -62,15 +62,25 @@ contract WithdrawProtocolFeesTest is Test {
         vm.stopPrank();
     }
 
-    // Constructor
-
-    function test_Constructor_SuccessWhen_SetsInitialOwner() public view {
-        assertEq(scheduledProtocol.owner(), owner);
-    }
-
     // Protocol fee withdrawal
 
     function test_WithdrawProtocolFees_RevertWhen_CallerIsNotOwner() public {
+        vm.startPrank(payer);
+
+        uint256 paymentId = _createOneTimePayment();
+
+        vm.warp(executeAfter);
+
+        vm.stopPrank();
+
+        vm.startPrank(executor);
+
+        scheduledProtocol.executePayment(paymentId);
+
+        vm.stopPrank();
+
+        assertEq(scheduledProtocol.getAccumulatedProtocolFees(), PROTOCOL_FEE);
+
         vm.startPrank(other);
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, other));
@@ -154,6 +164,7 @@ contract WithdrawProtocolFeesTest is Test {
     function test_WithdrawProtocolFees_SuccessWhen_MultipleExecutionsAccumulateFees() public {
         uint256 accumulatedProtocolFeesBefore = scheduledProtocol.getAccumulatedProtocolFees();
         uint256 scheduledProtocolBalanceBefore = mockUSDC.balanceOf(address(scheduledProtocol));
+        uint256 ownerBalanceBefore = mockUSDC.balanceOf(owner);
 
         vm.startPrank(payer);
 
@@ -173,8 +184,13 @@ contract WithdrawProtocolFeesTest is Test {
 
         scheduledProtocol.executePayment(paymentIdOne);
 
+        vm.stopPrank();
+
         assertEq(scheduledProtocol.getAccumulatedProtocolFees(), accumulatedProtocolFeesBefore + PROTOCOL_FEE);
         assertEq(mockUSDC.balanceOf(address(scheduledProtocol)), scheduledProtocolBalanceBefore + PROTOCOL_FEE);
+        assertEq(mockUSDC.balanceOf(owner), ownerBalanceBefore);
+
+        vm.startPrank(executor);
 
         scheduledProtocol.executePayment(paymentIdTwo);
 
@@ -182,6 +198,17 @@ contract WithdrawProtocolFeesTest is Test {
 
         assertEq(scheduledProtocol.getAccumulatedProtocolFees(), accumulatedProtocolFeesBefore + PROTOCOL_FEE * 2);
         assertEq(mockUSDC.balanceOf(address(scheduledProtocol)), scheduledProtocolBalanceBefore + PROTOCOL_FEE * 2);
+        assertEq(mockUSDC.balanceOf(owner), ownerBalanceBefore);
+
+        vm.startPrank(owner);
+
+        scheduledProtocol.withdrawProtocolFees();
+
+        vm.stopPrank();
+
+        assertEq(scheduledProtocol.getAccumulatedProtocolFees(), accumulatedProtocolFeesBefore);
+        assertEq(mockUSDC.balanceOf(address(scheduledProtocol)), scheduledProtocolBalanceBefore);
+        assertEq(mockUSDC.balanceOf(owner), ownerBalanceBefore + (PROTOCOL_FEE * 2));
     }
 
     function test_WithdrawProtocolFees_SuccessWhen_LeavesUnaccountedUSDCInContract() public {
@@ -270,8 +297,12 @@ contract WithdrawProtocolFeesTest is Test {
 
         scheduledProtocol.acceptOwnership();
 
+        vm.stopPrank();
+
         assertEq(scheduledProtocol.owner(), newOwner);
         assertEq(scheduledProtocol.pendingOwner(), address(0));
+
+        vm.startPrank(newOwner);
 
         scheduledProtocol.withdrawProtocolFees();
 

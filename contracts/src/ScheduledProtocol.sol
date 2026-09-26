@@ -43,6 +43,9 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
      * @dev Sets the USDC token used for payment settlement, and the initial owner as the deployer.
      */
     constructor(IERC20 usdc_) Ownable(msg.sender) {
+        if (address(usdc_) == address(0)) {
+            revert ScheduledProtocolInvalidUSDCAddress();
+        }
         USDC = usdc_;
     }
 

@@ -381,9 +381,9 @@ contract ExecutePaymentTest is Test {
 
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, payer, 0, PROTOCOL_FEE));
-
         vm.startPrank(executor);
+
+        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, payer, 0, PROTOCOL_FEE));
 
         scheduledProtocol.executePayment(paymentId);
 

@@ -19,6 +19,8 @@ contract GetPaymentStatusTest is Test {
     MockUSDC private mockUSDC;
     ScheduledProtocol private scheduledProtocol;
 
+    uint32 private constant MIN_VALID_RECURRING_TOTAL_OCCURRENCES = 2;
+
     uint96 private constant VALID_AMOUNT = 100e6;
     // Delay added to `block.timestamp` to produce a valid future `executeAfter`.
     uint256 private constant VALID_EXECUTE_AFTER_DELAY = 1 days;
@@ -54,14 +56,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_PaymentIsCancelled() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_ONE_TIME_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.None, VALID_ONE_TIME_TOTAL_OCCURRENCES);
 
         scheduledProtocol.cancelPayment(paymentId);
 
@@ -77,14 +72,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_PaymentRemainsCancelledAtFinalWindowExpiration() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_ONE_TIME_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.None, VALID_ONE_TIME_TOTAL_OCCURRENCES);
 
         scheduledProtocol.cancelPayment(paymentId);
 
@@ -104,14 +92,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_OneTimeIsBeforeExecuteAfter() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_ONE_TIME_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.None, VALID_ONE_TIME_TOTAL_OCCURRENCES);
 
         vm.warp(executeAfter - 1);
 
@@ -125,14 +106,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_OneTimeIsAtExecuteAfter() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_ONE_TIME_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.None, VALID_ONE_TIME_TOTAL_OCCURRENCES);
 
         vm.warp(executeAfter);
 
@@ -146,14 +120,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_OneTimeIsBeforeFinalWindowExpiration() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_ONE_TIME_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.None, VALID_ONE_TIME_TOTAL_OCCURRENCES);
 
         uint256 finalWindowExpiration = uint256(executeAfter) + VALID_EXPIRES_AFTER;
 
@@ -169,14 +136,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_OneTimeIsAtFinalWindowExpiration() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_ONE_TIME_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.None, VALID_ONE_TIME_TOTAL_OCCURRENCES);
 
         uint256 finalWindowExpiration = uint256(executeAfter) + VALID_EXPIRES_AFTER;
 
@@ -192,14 +152,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_OneTimeIsPastFinalWindowExpiration() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_ONE_TIME_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.None, VALID_ONE_TIME_TOTAL_OCCURRENCES);
 
         uint256 finalWindowExpiration = uint256(executeAfter) + VALID_EXPIRES_AFTER;
 
@@ -217,14 +170,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_DailyIsBeforeExecuteAfter() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Daily,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Daily, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         vm.warp(executeAfter - 1);
 
@@ -238,14 +184,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_DailyIsAtExecuteAfter() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Daily,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Daily, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         vm.warp(executeAfter);
 
@@ -259,14 +198,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_DailyIsAtIntermediateWindowExpiration() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Daily,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Daily, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         uint256 intermediateWindowExpiration = executeAfter + 1 days + VALID_EXPIRES_AFTER;
 
@@ -282,14 +214,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_DailyIsBeforeFinalWindowExpiration() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Daily,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Daily, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         uint256 finalWindowExpiration =
             executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 days) + VALID_EXPIRES_AFTER;
@@ -306,14 +231,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_DailyIsAtFinalWindowExpiration() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Daily,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Daily, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         uint256 finalWindowExpiration =
             executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 days) + VALID_EXPIRES_AFTER;
@@ -330,14 +248,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_DailyIsPastFinalWindowExpiration() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Daily,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Daily, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         uint256 finalWindowExpiration =
             executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 days) + VALID_EXPIRES_AFTER;
@@ -356,14 +267,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_WeeklyIsBeforeExecuteAfter() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Weekly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Weekly, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         vm.warp(executeAfter - 1);
 
@@ -377,14 +281,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_WeeklyIsAtExecuteAfter() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Weekly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Weekly, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         vm.warp(executeAfter);
 
@@ -398,14 +295,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_WeeklyIsAtIntermediateWindowExpiration() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Weekly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Weekly, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         uint256 intermediateWindowExpiration = executeAfter + 1 weeks + VALID_EXPIRES_AFTER;
 
@@ -421,14 +311,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_WeeklyIsBeforeFinalWindowExpiration() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Weekly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Weekly, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         uint256 finalWindowExpiration =
             executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 weeks) + VALID_EXPIRES_AFTER;
@@ -445,14 +328,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_WeeklyIsAtFinalWindowExpiration() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Weekly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Weekly, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         uint256 finalWindowExpiration =
             executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 weeks) + VALID_EXPIRES_AFTER;
@@ -469,14 +345,7 @@ contract GetPaymentStatusTest is Test {
     function test_GetPaymentStatus_SuccessWhen_WeeklyIsPastFinalWindowExpiration() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Weekly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Weekly, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         uint256 finalWindowExpiration =
             executeAfter + ((VALID_RECURRING_TOTAL_OCCURRENCES - 1) * 1 weeks) + VALID_EXPIRES_AFTER;
@@ -498,14 +367,7 @@ contract GetPaymentStatusTest is Test {
 
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Monthly, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         vm.warp(executeAfter - 1);
 
@@ -522,14 +384,7 @@ contract GetPaymentStatusTest is Test {
 
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Monthly, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         vm.warp(executeAfter);
 
@@ -546,14 +401,7 @@ contract GetPaymentStatusTest is Test {
 
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Monthly, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         uint256 intermediateWindowExpiration =
             BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, 1) + VALID_EXPIRES_AFTER;
@@ -573,14 +421,7 @@ contract GetPaymentStatusTest is Test {
 
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Monthly, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         uint256 finalWindowExpiration = BokkyPooBahsDateTimeLibrary.addMonths(
             executeAfter, VALID_RECURRING_TOTAL_OCCURRENCES - 1
@@ -601,14 +442,7 @@ contract GetPaymentStatusTest is Test {
 
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Monthly, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         uint256 finalWindowExpiration = BokkyPooBahsDateTimeLibrary.addMonths(
             executeAfter, VALID_RECURRING_TOTAL_OCCURRENCES - 1
@@ -629,14 +463,7 @@ contract GetPaymentStatusTest is Test {
 
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createPayment(IScheduledProtocol.RecurrenceType.Monthly, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         uint256 finalWindowExpiration = BokkyPooBahsDateTimeLibrary.addMonths(
             executeAfter, VALID_RECURRING_TOTAL_OCCURRENCES - 1
@@ -655,18 +482,10 @@ contract GetPaymentStatusTest is Test {
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
 
-        uint32 validRecurringTotalOccurrences = 2;
-
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            validRecurringTotalOccurrences
-        );
+        uint256 paymentId =
+            _createPayment(IScheduledProtocol.RecurrenceType.Monthly, MIN_VALID_RECURRING_TOTAL_OCCURRENCES);
 
         // February 28th, 2026 @ 10:00 UTC
         uint256 expectedFinalOccurrenceStart = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 2, 28, 10, 0, 0);
@@ -684,18 +503,10 @@ contract GetPaymentStatusTest is Test {
         // April 30th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 30, 10, 0, 0));
 
-        uint32 validRecurringTotalOccurrences = 2;
-
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            validRecurringTotalOccurrences
-        );
+        uint256 paymentId =
+            _createPayment(IScheduledProtocol.RecurrenceType.Monthly, MIN_VALID_RECURRING_TOTAL_OCCURRENCES);
 
         // May 30th, 2026 @ 10:00 UTC
         uint256 expectedFinalOccurrenceStart = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 5, 30, 10, 0, 0);
@@ -717,14 +528,8 @@ contract GetPaymentStatusTest is Test {
 
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId =
+            _createPayment(IScheduledProtocol.RecurrenceType.LastOfMonth, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         vm.warp(executeAfter - 1);
 
@@ -741,14 +546,8 @@ contract GetPaymentStatusTest is Test {
 
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId =
+            _createPayment(IScheduledProtocol.RecurrenceType.LastOfMonth, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         vm.warp(executeAfter);
 
@@ -765,14 +564,8 @@ contract GetPaymentStatusTest is Test {
 
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId =
+            _createPayment(IScheduledProtocol.RecurrenceType.LastOfMonth, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         // February 28th, 2026 @ 10:00 UTC
         uint256 intermediateOccurrenceStart = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 2, 28, 10, 0, 0);
@@ -794,14 +587,8 @@ contract GetPaymentStatusTest is Test {
 
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId =
+            _createPayment(IScheduledProtocol.RecurrenceType.LastOfMonth, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         // October 31st, 2026 @ 10:00 UTC
         uint256 finalWindowExpiration =
@@ -822,14 +609,8 @@ contract GetPaymentStatusTest is Test {
 
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId =
+            _createPayment(IScheduledProtocol.RecurrenceType.LastOfMonth, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         // October 31st, 2026 @ 10:00 UTC
         uint256 finalWindowExpiration =
@@ -850,14 +631,8 @@ contract GetPaymentStatusTest is Test {
 
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId =
+            _createPayment(IScheduledProtocol.RecurrenceType.LastOfMonth, VALID_RECURRING_TOTAL_OCCURRENCES);
 
         // October 31st, 2026 @ 10:00 UTC
         uint256 finalWindowExpiration =
@@ -876,18 +651,10 @@ contract GetPaymentStatusTest is Test {
         // February 28th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 2, 28, 10, 0, 0));
 
-        uint32 validRecurringTotalOccurrences = 2;
-
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            validRecurringTotalOccurrences
-        );
+        uint256 paymentId =
+            _createPayment(IScheduledProtocol.RecurrenceType.LastOfMonth, MIN_VALID_RECURRING_TOTAL_OCCURRENCES);
 
         // March 28th, 2026 @ 10:00 UTC
         uint256 incorrectFinalOccurrenceStart = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 3, 28, 10, 0, 0);
@@ -914,18 +681,10 @@ contract GetPaymentStatusTest is Test {
         // April 30th, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 30, 10, 0, 0));
 
-        uint32 validRecurringTotalOccurrences = 2;
-
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            validRecurringTotalOccurrences
-        );
+        uint256 paymentId =
+            _createPayment(IScheduledProtocol.RecurrenceType.LastOfMonth, MIN_VALID_RECURRING_TOTAL_OCCURRENCES);
 
         // May 30th, 2026 @ 10:00 UTC
         uint256 incorrectFinalOccurrenceStart = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 5, 30, 10, 0, 0);
@@ -946,5 +705,16 @@ contract GetPaymentStatusTest is Test {
         vm.stopPrank();
 
         assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Completed));
+    }
+
+    // Helpers
+
+    function _createPayment(IScheduledProtocol.RecurrenceType recurrence, uint32 totalOccurrences)
+        private
+        returns (uint256 paymentId)
+    {
+        paymentId = scheduledProtocol.createPayment(
+            recipient, VALID_AMOUNT, recurrence, executeAfter, VALID_EXPIRES_AFTER, totalOccurrences
+        );
     }
 }
