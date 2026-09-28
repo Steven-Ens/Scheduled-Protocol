@@ -28,6 +28,16 @@ contract GetPaymentStatusTest is Test {
     uint32 private constant VALID_ONE_TIME_TOTAL_OCCURRENCES = 1;
     uint32 private constant VALID_RECURRING_TOTAL_OCCURRENCES = 10;
 
+    uint96 private constant MAX_VALID_AMOUNT = type(uint96).max;
+    uint40 private constant MAX_VALID_EXECUTE_AFTER = type(uint40).max;
+    uint32 private constant MAX_VALID_RECURRING_TOTAL_OCCURRENCES = type(uint32).max;
+
+    uint24 private constant MAX_VALID_ONE_TIME_EXPIRES_AFTER = 28 days;
+    uint24 private constant MAX_VALID_DAILY_EXPIRES_AFTER = 1 days;
+    uint24 private constant MAX_VALID_WEEKLY_EXPIRES_AFTER = 1 weeks;
+    uint24 private constant MAX_VALID_MONTHLY_EXPIRES_AFTER = 28 days;
+    uint24 private constant MAX_VALID_LAST_OF_MONTH_EXPIRES_AFTER = 28 days;
+
     function setUp() public {
         payer = makeAddr("payer");
         recipient = makeAddr("recipient");
@@ -165,6 +175,21 @@ contract GetPaymentStatusTest is Test {
         assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Completed));
     }
 
+    function test_GetPaymentStatus_SuccessWhen_OneTimeHasMaximumValidValues() public {
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            MAX_VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            MAX_VALID_EXECUTE_AFTER,
+            MAX_VALID_ONE_TIME_EXPIRES_AFTER,
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
+        );
+
+        scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+    }
+
     // Daily
 
     function test_GetPaymentStatus_SuccessWhen_DailyIsBeforeExecuteAfter() public {
@@ -262,6 +287,21 @@ contract GetPaymentStatusTest is Test {
         assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Completed));
     }
 
+    function test_GetPaymentStatus_SuccessWhen_DailyHasMaximumValidValues() public {
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            MAX_VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Daily,
+            MAX_VALID_EXECUTE_AFTER,
+            MAX_VALID_DAILY_EXPIRES_AFTER,
+            MAX_VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+    }
+
     // Weekly
 
     function test_GetPaymentStatus_SuccessWhen_WeeklyIsBeforeExecuteAfter() public {
@@ -357,6 +397,21 @@ contract GetPaymentStatusTest is Test {
         vm.stopPrank();
 
         assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Completed));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_WeeklyHasMaximumValidValues() public {
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            MAX_VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Weekly,
+            MAX_VALID_EXECUTE_AFTER,
+            MAX_VALID_WEEKLY_EXPIRES_AFTER,
+            MAX_VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
     }
 
     // Monthly

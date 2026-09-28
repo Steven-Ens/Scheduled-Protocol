@@ -137,10 +137,11 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
      * @inheritdoc IScheduledProtocol
      */
     function executePayment(uint256 paymentId) external override isValidPaymentId(paymentId) {
-        Payment storage payment = _payments[paymentId];
         // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.
         // forge-lint: disable-next-line(block-timestamp)
         uint256 timestamp = block.timestamp;
+        Payment storage payment = _payments[paymentId];
+
         if (timestamp < payment.executeAfter) {
             revert ScheduledProtocolExecutionNotStarted(payment.executeAfter);
         }
@@ -163,8 +164,8 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
 
         // Effects are applied before external calls per checks-effects-interactions.
 
-        // Safe because `occurrenceIndex` is always less than the `uint32` `totalOccurrences` count, so casting it and
-        // adding one cannot exceed `type(uint32).max`.
+        // Safe because `occurrenceIndex < payment.totalOccurrences <= type(uint32).max`, so `occurrenceIndex + 1`
+        // cannot exceed `type(uint32).max`.
         // forge-lint: disable-next-line(unsafe-typecast)
         payment.lastExecutedOccurrencePlusOne = uint32(occurrenceIndex) + 1;
         _accumulatedProtocolFees += PROTOCOL_FEE;
@@ -184,6 +185,7 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
      */
     function cancelPayment(uint256 paymentId) external override isValidPaymentId(paymentId) {
         Payment storage payment = _payments[paymentId];
+
         if (msg.sender != payment.payer) {
             revert ScheduledProtocolUnauthorizedCaller(msg.sender);
         }
@@ -194,6 +196,7 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
         }
 
         payment.cancelled = true;
+
         emit PaymentCancelled(paymentId);
     }
 
@@ -254,6 +257,11 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
     function _getPaymentStatus(uint256 paymentId) internal view returns (PaymentStatus status) {
         Payment storage payment = _payments[paymentId];
 
+        // Widen stored values to uint256 before arithmetic to prevent overflow at valid type boundaries.
+        uint256 executeAfter = payment.executeAfter;
+        uint256 expiresAfter = payment.expiresAfter;
+        uint256 totalOccurrences = payment.totalOccurrences;
+
         if (payment.cancelled) {
             return PaymentStatus.Cancelled;
         }
@@ -265,16 +273,16 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
         // `block.timestamp` is intentionally used as the protocol's authoritative scheduling clock.
         // forge-lint: disable-next-line(block-timestamp)
         uint256 timestamp = block.timestamp;
-        if (payment.recurrence == RecurrenceType.None && timestamp >= payment.executeAfter + payment.expiresAfter) {
+        if (payment.recurrence == RecurrenceType.None && timestamp >= executeAfter + expiresAfter) {
             return PaymentStatus.Completed;
         } else if (
             payment.recurrence == RecurrenceType.Daily
-                && timestamp >= payment.executeAfter + ((payment.totalOccurrences - 1) * 1 days) + payment.expiresAfter
+                && timestamp >= executeAfter + ((totalOccurrences - 1) * 1 days) + expiresAfter
         ) {
             return PaymentStatus.Completed;
         } else if (
             payment.recurrence == RecurrenceType.Weekly
-                && timestamp >= payment.executeAfter + ((payment.totalOccurrences - 1) * 1 weeks) + payment.expiresAfter
+                && timestamp >= executeAfter + ((totalOccurrences - 1) * 1 weeks) + expiresAfter
         ) {
             return PaymentStatus.Completed;
         } else if (
@@ -293,7 +301,6 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
         ) {
             return PaymentStatus.Completed;
         }
-
         return PaymentStatus.Active;
     }
 
