@@ -47,14 +47,7 @@ contract CancelPaymentTest is Test {
     function test_CancelPayment_RevertWhen_UnauthorizedCaller() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_ONE_TIME_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createOneTimePayment();
 
         vm.stopPrank();
 
@@ -72,14 +65,7 @@ contract CancelPaymentTest is Test {
     function test_CancelPayment_SuccessWhen_PaymentIsActive() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_ONE_TIME_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createOneTimePayment();
 
         scheduledProtocol.cancelPayment(paymentId);
 
@@ -93,14 +79,7 @@ contract CancelPaymentTest is Test {
     function test_CancelPayment_SuccessWhen_EmitsPaymentCancelled() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_ONE_TIME_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createOneTimePayment();
 
         // Check the first indexed topic and the emitting contract.
         vm.expectEmit(true, false, false, false, address(scheduledProtocol));
@@ -115,14 +94,7 @@ contract CancelPaymentTest is Test {
     function test_CancelPayment_RevertWhen_PaymentIsCompleted() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_ONE_TIME_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createOneTimePayment();
 
         vm.warp(executeAfter + VALID_EXPIRES_AFTER);
 
@@ -141,14 +113,7 @@ contract CancelPaymentTest is Test {
     function test_CancelPayment_RevertWhen_PaymentIsAlreadyCancelled() public {
         vm.startPrank(payer);
 
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.None,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_ONE_TIME_TOTAL_OCCURRENCES
-        );
+        uint256 paymentId = _createOneTimePayment();
 
         scheduledProtocol.cancelPayment(paymentId);
 
@@ -162,5 +127,18 @@ contract CancelPaymentTest is Test {
         scheduledProtocol.cancelPayment(paymentId);
 
         vm.stopPrank();
+    }
+
+    // Helpers
+
+    function _createOneTimePayment() private returns (uint256 paymentId) {
+        paymentId = scheduledProtocol.createPayment(
+            recipient,
+            VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.None,
+            executeAfter,
+            VALID_EXPIRES_AFTER,
+            VALID_ONE_TIME_TOTAL_OCCURRENCES
+        );
     }
 }

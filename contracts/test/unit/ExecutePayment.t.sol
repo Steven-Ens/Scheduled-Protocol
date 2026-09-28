@@ -186,7 +186,7 @@ contract ExecutePaymentTest is Test {
     function test_ExecutePayment_RevertWhen_OccurrenceAlreadyExecuted() public {
         vm.startPrank(payer);
 
-        // Enough funds and approval to call executePayment twice
+        // Enough funds and approval to call executePayment twice.
         mockUSDC.mint(payer, TOTAL_REQUIRED_AMOUNT);
         mockUSDC.approve(address(scheduledProtocol), TOTAL_REQUIRED_AMOUNT * 2);
 
@@ -381,9 +381,9 @@ contract ExecutePaymentTest is Test {
 
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, payer, 0, PROTOCOL_FEE));
-
         vm.startPrank(executor);
+
+        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, payer, 0, PROTOCOL_FEE));
 
         scheduledProtocol.executePayment(paymentId);
 

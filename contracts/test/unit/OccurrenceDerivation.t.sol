@@ -13,7 +13,7 @@ import {MockUSDC} from "../mocks/MockUSDC.sol";
 import {IScheduledProtocol} from "../../src/interfaces/IScheduledProtocol.sol";
 import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
 
-// Exposes the internal _deriveOccurrence helper for testing.
+// Exposes the internal `_deriveOccurrence` helper for testing.
 contract ScheduledProtocolHarness is ScheduledProtocol {
     constructor(IERC20 usdc_) ScheduledProtocol(usdc_) {}
 
@@ -28,11 +28,12 @@ contract ScheduledProtocolHarness is ScheduledProtocol {
 
 contract OccurrenceDerivationTest is Test {
     uint40 private executeAfter;
-    // Delay added to `block.timestamp` to produce a valid future `executeAfter`.
-    uint256 private constant VALID_EXECUTE_AFTER_DELAY = 1 days;
 
     MockUSDC private mockUSDC;
-    ScheduledProtocolHarness harness;
+    ScheduledProtocolHarness private harness;
+
+    // Delay added to `block.timestamp` to produce a valid future `executeAfter`.
+    uint256 private constant VALID_EXECUTE_AFTER_DELAY = 1 days;
 
     function setUp() public {
         // Safe because the test timestamp plus one day is well below `type(uint40).max`.
