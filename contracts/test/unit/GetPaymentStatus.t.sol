@@ -30,13 +30,14 @@ contract GetPaymentStatusTest is Test {
 
     uint96 private constant MAX_VALID_AMOUNT = type(uint96).max;
     uint40 private constant MAX_VALID_EXECUTE_AFTER = type(uint40).max;
-    uint32 private constant MAX_VALID_RECURRING_TOTAL_OCCURRENCES = type(uint32).max;
 
     uint24 private constant MAX_VALID_ONE_TIME_EXPIRES_AFTER = 28 days;
     uint24 private constant MAX_VALID_DAILY_EXPIRES_AFTER = 1 days;
     uint24 private constant MAX_VALID_WEEKLY_EXPIRES_AFTER = 1 weeks;
     uint24 private constant MAX_VALID_MONTHLY_EXPIRES_AFTER = 28 days;
     uint24 private constant MAX_VALID_LAST_OF_MONTH_EXPIRES_AFTER = 28 days;
+
+    uint32 private constant MAX_VALID_RECURRING_TOTAL_OCCURRENCES = type(uint32).max;
 
     function setUp() public {
         payer = makeAddr("payer");
@@ -176,6 +177,8 @@ contract GetPaymentStatusTest is Test {
     }
 
     function test_GetPaymentStatus_SuccessWhen_OneTimeHasMaximumValidValues() public {
+        vm.startPrank(payer);
+
         uint256 paymentId = scheduledProtocol.createPayment(
             recipient,
             MAX_VALID_AMOUNT,
@@ -288,6 +291,8 @@ contract GetPaymentStatusTest is Test {
     }
 
     function test_GetPaymentStatus_SuccessWhen_DailyHasMaximumValidValues() public {
+        vm.startPrank(payer);
+
         uint256 paymentId = scheduledProtocol.createPayment(
             recipient,
             MAX_VALID_AMOUNT,
@@ -400,6 +405,8 @@ contract GetPaymentStatusTest is Test {
     }
 
     function test_GetPaymentStatus_SuccessWhen_WeeklyHasMaximumValidValues() public {
+        vm.startPrank(payer);
+
         uint256 paymentId = scheduledProtocol.createPayment(
             recipient,
             MAX_VALID_AMOUNT,
@@ -573,6 +580,23 @@ contract GetPaymentStatusTest is Test {
         vm.stopPrank();
 
         assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Completed));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_MonthlyHasMaximumValidValues() public {
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            MAX_VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.Monthly,
+            MAX_VALID_EXECUTE_AFTER,
+            MAX_VALID_MONTHLY_EXPIRES_AFTER,
+            MAX_VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
     }
 
     // LastOfMonth
@@ -760,6 +784,32 @@ contract GetPaymentStatusTest is Test {
         vm.stopPrank();
 
         assertEq(uint8(status), uint8(IScheduledProtocol.PaymentStatus.Completed));
+    }
+
+    function test_GetPaymentStatus_SuccessWhen_LastOfMonthHasMaximumValidValues() public {
+        // Latest last-of-month timestamp representable by uint40:
+        // January 31st, 36812 @ 23:59:59 UTC.
+        uint40 MAX_VALID_LAST_OF_MONTH_EXECUTE_AFTER = 1_099_509_983_999;
+
+        vm.startPrank(payer);
+
+        uint256 paymentId = scheduledProtocol.createPayment(
+            recipient,
+            MAX_VALID_AMOUNT,
+            IScheduledProtocol.RecurrenceType.LastOfMonth,
+            MAX_VALID_LAST_OF_MONTH_EXECUTE_AFTER,
+            MAX_VALID_LAST_OF_MONTH_EXPIRES_AFTER,
+            MAX_VALID_RECURRING_TOTAL_OCCURRENCES
+        );
+
+        scheduledProtocol.getPaymentStatus(paymentId);
+
+        vm.stopPrank();
+
+        // January 31st, 36812 @ 23:59:59 UTC.
+        uint256 expectedExecuteAfter = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(36812, 1, 31, 23, 59, 59);
+
+        assertEq(MAX_VALID_LAST_OF_MONTH_EXECUTE_AFTER, expectedExecuteAfter);
     }
 
     // Helpers

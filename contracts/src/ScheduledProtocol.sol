@@ -287,17 +287,15 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
             return PaymentStatus.Completed;
         } else if (
             payment.recurrence == RecurrenceType.Monthly
-                && timestamp
-                    >= BokkyPooBahsDateTimeLibrary.addMonths(payment.executeAfter, payment.totalOccurrences - 1)
-                        + payment.expiresAfter
+                && timestamp >= BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, totalOccurrences - 1) + expiresAfter
         ) {
             return PaymentStatus.Completed;
         } else if (
             payment.recurrence == RecurrenceType.LastOfMonth
                 && timestamp
                     >= _lastOfMonthOccurrenceStart(
-                            BokkyPooBahsDateTimeLibrary.addMonths(payment.executeAfter, payment.totalOccurrences - 1)
-                        ) + payment.expiresAfter
+                            BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, totalOccurrences - 1)
+                        ) + expiresAfter
         ) {
             return PaymentStatus.Completed;
         }
