@@ -9,22 +9,10 @@ import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {MockUSDC} from "../mocks/MockUSDC.sol";
+import {ScheduledProtocolHarness} from "../utils/ScheduledProtocolHarness.sol";
 
 import {IScheduledProtocol} from "../../src/interfaces/IScheduledProtocol.sol";
 import {ScheduledProtocol} from "../../src/ScheduledProtocol.sol";
-
-// Exposes the internal `_deriveOccurrence` helper for testing.
-contract ScheduledProtocolHarness is ScheduledProtocol {
-    constructor(IERC20 usdc_) ScheduledProtocol(usdc_) {}
-
-    function deriveOccurrence(RecurrenceType recurrence, uint40 executeAfter, uint256 timestamp)
-        external
-        pure
-        returns (uint256 occurrenceIndex, uint256 occurrenceStart)
-    {
-        return _deriveOccurrence(recurrence, executeAfter, timestamp);
-    }
-}
 
 contract OccurrenceDerivationTest is Test {
     uint40 private executeAfter;
