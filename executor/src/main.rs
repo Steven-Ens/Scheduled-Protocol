@@ -1,4 +1,4 @@
-// Declares the config module whose code lives in src/config.rs.
+// Declares the config module from src/config.rs.
 mod config;
 
 fn main() {}
