@@ -1,14 +1,14 @@
-# Address of the ScheduledProtocol deployment being monitored.
-scheduled_protocol_address = ""
-
 # Arbitrum Sepolia.
 chain_id = 421614
+
+# Address of the ScheduledProtocol deployment being monitored.
+scheduled_protocol_address = ""
 
 # Replace with the block containing the ScheduledProtocol deployment.
 start_block = 0
 
-# Local SQLite database path.
-database_path = "executor.db"
-
 # Poll for newly produced blocks once per second.
 poll_interval_seconds = 1
+
+# Local SQLite database path.
+database_path = "executor.db"

@@ -1,3 +1,4 @@
-fn main() {
-    println!("Hello, world!");
-}
+// Declares the config module whose code lives in src/config.rs.
+mod config;
+
+fn main() {}
