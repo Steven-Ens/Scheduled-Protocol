@@ -1,14 +1,14 @@
 use std::path::Path;
 
 // Defines the executor's private secrets, owned by Secrets at runtime.
-struct Secrets {
+pub(crate) struct Secrets {
     rpc_url: String,
     private_key: String,
 }
 
 impl Secrets {
     // Loads secrets from a borrowed .env path and allows either dotenv or validation errors to be returned.
-    fn from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+    pub(crate) fn from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
         // The owned mutable values may currently be absent or may eventually contain a String.
         let mut rpc_url: Option<String> = None;
         let mut private_key: Option<String> = None;
