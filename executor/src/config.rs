@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 
 // Serde generates the deserialization code for Config automatically.
 #[derive(Deserialize)]
-// Represents executor configuration.
-struct Config {
+// Defines the executor's runtime config. Accessible throughout this crate without exposing it as a public external API.
+pub(crate) struct Config {
     chain_id: u64,
     scheduled_protocol_address: Address,
     // Block containing the ScheduledProtocol deployment.
@@ -23,7 +23,8 @@ impl Config {
     }
 
     // Loads Config from a borrowed filesystem path and returns either Config or any standard error.
-    fn from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+    // Callable from main.rs.
+    pub(crate) fn from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
         // Reads the file into an owned String where `?` returns early if the filesystem read fails.
         let contents = std::fs::read_to_string(path)?;
         let config = Self::from_toml_str(&contents)?;
@@ -79,7 +80,7 @@ mod tests {
         database_path = "executor.db"
         "#;
 
-        // Writes the TOML text to disk and fails the test if the file cannot be created.
+        // Borrows the path and writes the TOML text to disk, fails the test if the file cannot be created.
         std::fs::write(&path, toml).expect("temporary config file should be written");
         let config = Config::from_file(&path).expect("valid config file should load");
         std::fs::remove_file(&path).expect("temporary config file should be removed");
@@ -89,14 +90,14 @@ mod tests {
     }
 
     #[test]
-    // Verifies that loading a nonexistent config file fails cleanly.
+    // Verifies that loading a nonexistent config produces an error.
     fn load_executor_config_from_missing_file_returns_error() {
-        // Creates and owns a temporary path for a file that should not exist.
+        // Creates an owned temporary path for a file that should not exist.
         let path = std::env::temp_dir().join("executor-test-missing.toml");
-        // Ensures a stale file from an earlier test run does not accidentally make this test succeed. Failure is expected.
+        // Removes any stale file from an earlier interrupted test run and intentionally ignores the result.
         let _ = std::fs::remove_file(&path);
 
-        // Attempts to load the nonexistent file and keeps the Result without unwrapping it.
+        // Attempts to load the nonexistent file without unwrapping the Result.
         let result = Config::from_file(&path);
 
         // Verifies that the failed file read produced an Err result.
