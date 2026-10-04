@@ -1,11 +1,20 @@
-use alloy::providers::{Provider, ProviderBuilder};
+use alloy::{
+    providers::{Provider, ProviderBuilder},
+    signers::local::PrivateKeySigner,
+};
 
 // Connects to the RPC and verifies that it matches the configured chain.
 pub(crate) async fn connect_and_validate(
     rpc_url: &str,
+    private_key: &str,
     configured_chain_id: u64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let provider = ProviderBuilder::new().connect(rpc_url).await?;
+    let signer: PrivateKeySigner = private_key.parse()?;
+
+    let provider = ProviderBuilder::new()
+        .wallet(signer)
+        .connect(rpc_url)
+        .await?;
 
     let rpc_chain_id = provider.get_chain_id().await?;
 

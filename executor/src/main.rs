@@ -9,7 +9,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = config::Config::from_file(Path::new("executor.toml"))?;
     let secrets = secrets::Secrets::from_file(Path::new(".env"))?;
 
-    rpc::connect_and_validate(secrets.rpc_url(), config.chain_id()).await?;
+    rpc::connect_and_validate(
+        secrets.rpc_url(),
+        secrets.private_key(),
+        config.chain_id()
+    )
+    .await?;
 
     Ok(())
 }
