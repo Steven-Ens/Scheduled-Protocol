@@ -40,6 +40,11 @@ impl Secrets {
             private_key,
         })
     }
+
+    // Returns the configured RPC URL.
+    pub(crate) fn rpc_url(&self) -> &str {
+        &self.rpc_url
+    }
 }
 
 #[cfg(test)]

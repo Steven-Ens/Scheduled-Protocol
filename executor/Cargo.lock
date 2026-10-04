@@ -1729,6 +1729,7 @@ dependencies = [
  "alloy",
  "dotenvy",
  "serde",
+ "tokio",
  "toml",
 ]
 

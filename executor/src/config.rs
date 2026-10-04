@@ -25,6 +25,11 @@ impl Config {
         let config = Self::from_toml_str(&contents)?;
         Ok(config)
     }
+
+    // Returns the configured chain ID.
+    pub(crate) fn chain_id(&self) -> u64 {
+        self.chain_id
+    }
 }
 
 #[cfg(test)]
