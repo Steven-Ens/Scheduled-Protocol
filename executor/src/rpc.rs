@@ -1,5 +1,5 @@
 use alloy::{
-    providers::{Provider, ProviderBuilder},
+    providers::{DynProvider, Provider, ProviderBuilder},
     signers::local::PrivateKeySigner,
 };
 
@@ -8,7 +8,7 @@ pub(crate) async fn connect_and_validate(
     rpc_url: &str,
     private_key: &str,
     configured_chain_id: u64,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<DynProvider, Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = private_key.parse()?;
 
     let provider = ProviderBuilder::new()
@@ -20,7 +20,8 @@ pub(crate) async fn connect_and_validate(
 
     validate_chain_id(configured_chain_id, rpc_chain_id)?;
 
-    Ok(())
+    // Erases the concrete FillProvider type so it can be passed between executor modules as DynProvider.
+    Ok(provider.erased())
 }
 
 // Validates that the connected RPC matches the configured chain.

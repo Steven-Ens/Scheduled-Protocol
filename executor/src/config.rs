@@ -30,6 +30,11 @@ impl Config {
     pub(crate) fn chain_id(&self) -> u64 {
         self.chain_id
     }
+
+    // Returns the configured ScheduledProtocol address.
+    pub(crate) fn scheduled_protocol_address(&self) -> Address {
+        self.scheduled_protocol_address
+    }
 }
 
 #[cfg(test)]
