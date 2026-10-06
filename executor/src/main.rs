@@ -2,6 +2,7 @@ mod config;
 mod secrets;
 mod rpc;
 mod contract;
+mod storage;
 
 use alloy::primitives::U256;
 use std::path::Path;
@@ -18,8 +19,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .await?;
 
-    let payment_id = U256::from(0);
+    let connection = storage::open_database(config.database_path())?;
+    storage::initialize_schema(&connection)?;
+    storage::initialize_chain_state(
+        &connection,
+        config.chain_id(),
+    )?;
 
+    let payment_id = U256::from(1);
     let payment_status = contract::get_payment_status(
         config.scheduled_protocol_address(),
         provider,

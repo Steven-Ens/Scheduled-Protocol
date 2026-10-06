@@ -5,6 +5,7 @@ contracts/lib/
 contracts/out/
 
 # Rust
+executor/executor.db
 executor/executor.toml
 executor/target/
 

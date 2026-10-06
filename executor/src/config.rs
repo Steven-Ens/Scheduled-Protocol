@@ -35,6 +35,11 @@ impl Config {
     pub(crate) fn scheduled_protocol_address(&self) -> Address {
         self.scheduled_protocol_address
     }
+
+    // Returns the configured database path.
+    pub(crate) fn database_path(&self) -> &Path {
+        &self.database_path
+    }
 }
 
 #[cfg(test)]

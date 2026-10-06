@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 alloy = "2.5.0"
 dotenvy = "0.15.7"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }
 tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }
 toml = "1.1.6"
