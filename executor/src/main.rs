@@ -26,6 +26,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.chain_id(),
     )?;
 
+    let last_processed_block = storage::load_last_processed_block(&connection,config.chain_id())?;
+    println!("Last processed block: {last_processed_block:?}");
+
+    storage::save_last_processed_block(
+        &connection,
+        config.chain_id(),
+        316206160,
+    )?;
+    let last_processed_block = storage::load_last_processed_block(&connection, config.chain_id())?;
+    println!("Last processed block: {last_processed_block:?}");
+
     let payment_id = U256::from(1);
     let payment_status = contract::get_payment_status(
         config.scheduled_protocol_address(),

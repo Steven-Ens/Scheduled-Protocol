@@ -1,5 +1,5 @@
-use alloy::primitives::Address;
 use serde::Deserialize;
+use alloy::primitives::Address;
 use std::path::{Path, PathBuf};
 
 #[derive(Deserialize)]
