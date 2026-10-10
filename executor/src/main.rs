@@ -1,11 +1,11 @@
 mod config;
 mod secrets;
 mod rpc;
-mod contract;
 mod storage;
+mod contract;
 
-use alloy::primitives::U256;
 use std::path::Path;
+use alloy::primitives::U256;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -21,19 +21,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let connection = storage::open_database(config.database_path())?;
     storage::initialize_schema(&connection)?;
-    storage::initialize_chain_state(
-        &connection,
-        config.chain_id(),
-    )?;
+    storage::initialize_chain_state(&connection, config.chain_id(),)?;
 
     let last_processed_block = storage::load_last_processed_block(&connection,config.chain_id())?;
     println!("Last processed block: {last_processed_block:?}");
+
+    // Testing
 
     storage::save_last_processed_block(
         &connection,
         config.chain_id(),
         316206160,
     )?;
+
     let last_processed_block = storage::load_last_processed_block(&connection, config.chain_id())?;
     println!("Last processed block: {last_processed_block:?}");
 

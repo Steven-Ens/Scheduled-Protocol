@@ -4,8 +4,9 @@ use alloy::{
     sol,
 };
 
-// Generates typed Rust bindings for the ScheduledProtocol interface.
+// Generates type-safe Rust types for the ScheduledProtol ABI.
 sol! {
+    /// ScheduledProtocol contract binding used by the executor.
     #[sol(rpc)]
     interface IScheduledProtocol {
         enum PaymentStatus {
@@ -21,8 +22,8 @@ sol! {
     }
 }
 
-// Reads `getPaymentStatus` from the configured ScheduledProtocol deployment for payment
-// `payment_id`.
+/// Reads `getPaymentStatus` from the configured ScheduledProtocol deployment for payment
+/// `payment_id`.
 pub(crate) async fn get_payment_status(
     address: Address,
     provider: DynProvider,

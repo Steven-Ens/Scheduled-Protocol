@@ -3,7 +3,7 @@ use alloy::{
     signers::local::PrivateKeySigner,
 };
 
-// Connects to the RPC and verifies that it matches the configured chain.
+/// Connects to the configured RPC URL and verifies that its chain ID matches the configured chain.
 pub(crate) async fn connect_and_validate(
     rpc_url: &str,
     private_key: &str,
@@ -20,11 +20,11 @@ pub(crate) async fn connect_and_validate(
 
     validate_chain_id(configured_chain_id, rpc_chain_id)?;
 
-    // Erases the concrete FillProvider type so it can be passed between executor modules as DynProvider.
+    // Erases the specific FillProvider type so it can be passed between modules as DynProvider.
     Ok(provider.erased())
 }
 
-// Validates that the connected RPC matches the configured chain.
+/// Validates that the connected RPC matches the configured chain.
 fn validate_chain_id(configured_chain_id: u64, rpc_chain_id: u64) -> Result<(), std::io::Error> {
     if configured_chain_id != rpc_chain_id {
         return Err(std::io::Error::new(
@@ -42,7 +42,7 @@ fn validate_chain_id(configured_chain_id: u64, rpc_chain_id: u64) -> Result<(), 
 mod tests {
     use super::validate_chain_id;
 
-    // Verifies that matching configured and RPC chain IDs are accepted.
+    /// Verifies that matching configured and RPC chain IDs are accepted.
     #[test]
     fn matching_chain_ids_are_valid() {
         let result = validate_chain_id(421614, 421614);
@@ -50,7 +50,7 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    // Verifies that mismatched configured and RPC chain IDs return an error.
+    /// Verifies that mismatched configured and RPC chain IDs return an error.
     #[test]
     fn mismatched_chain_ids_return_error() {
         let result = validate_chain_id(421614, 1);
