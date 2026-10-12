@@ -1,5 +1,6 @@
-use rusqlite::{Connection, OptionalExtension};
 use std::{error::Error, path::Path};
+
+use rusqlite::{Connection, OptionalExtension};
 
 /// Opens the executor's SQLite database, creating the database file if it does not exist.
 pub(crate) fn open_database(database_path: &Path) -> Result<Connection, Box<dyn Error>> {
@@ -32,15 +33,15 @@ pub(crate) fn initialize_chain_state(
     connection: &Connection,
     configured_chain_id: u64,
 ) -> Result<(), Box<dyn Error>> {
-    // SQLite INTEGER is signed 64-bit so use a checked conversion to prevent silent narrowing.
+    // SQLite `INTEGER` is signed 64-bit so use a checked conversion to prevent silent narrowing.
     let configured_chain_id = i64::try_from(configured_chain_id)?;
 
-    // `query_row` passes the returned row to the closure, which extracts `chain_id` as an i64.
+    // `query_row` passes the returned row to the closure, which extracts `chain_id` as an `i64`.
     // `optional()` converts a missing row into `None` so a new database can initialize its state.
     let stored_chain_id = connection
         .query_row("SELECT chain_id FROM executor_state", [], |row| {
             // In `get<I, T>`, `I` is the column index/name type inferred from `"chain_id"`, while
-            // `T` is the Rust type used to decode the column value (`i64` here).
+            // `T` is the Rust type used to decode the column value which is `i64` here.
             row.get::<_, i64>("chain_id")
         })
         .optional()?;
@@ -112,7 +113,7 @@ pub(crate) fn save_last_processed_block(
 mod tests {
     use super::*;
 
-    /// Verifies that a fresh database stores the configured chain ID.
+    // Verifies that a fresh database stores the configured chain ID.
     #[test]
     fn fresh_database_initializes_chain_id() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;
@@ -130,7 +131,7 @@ mod tests {
         Ok(())
     }
 
-    /// Verifies that reinitializing with the same chain ID succeeds without creating duplicate state.
+    // Verifies that reinitializing with the same chain ID succeeds without creating duplicate state.
     #[test]
     fn matching_chain_id_is_accepted() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;
@@ -148,7 +149,7 @@ mod tests {
         Ok(())
     }
 
-    /// Verifies that persisted state cannot be reused with a different configured chain ID.
+    // Verifies that persisted state cannot be reused with a different configured chain ID.
     #[test]
     fn mismatched_chain_id_returns_error() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;
@@ -163,7 +164,7 @@ mod tests {
         Ok(())
     }
 
-    /// Verifies that validating an existing chain does not reset its saved checkpoint.
+    // Verifies that validating an existing chain does not reset its saved checkpoint.
     #[test]
     fn reinitializing_chain_preserves_checkpoint() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;
@@ -181,7 +182,7 @@ mod tests {
         Ok(())
     }
 
-    /// Verifies that values too large for SQLite INTEGER fail instead of being silently narrowed.
+    // Verifies that values too large for SQLite `INTEGER` fail instead of being silently narrowed.
     #[test]
     fn oversized_chain_id_returns_error() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;
@@ -195,7 +196,7 @@ mod tests {
         Ok(())
     }
 
-    /// Verifies that a negative persisted chain ID is rejected because chain IDs are unsigned.
+    // Verifies that a negative persisted chain ID is rejected because chain IDs are unsigned.
     #[test]
     fn negative_stored_chain_id_returns_error() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;
@@ -214,7 +215,7 @@ mod tests {
         Ok(())
     }
 
-    /// Verifies that a newly initialized chain has no last_processed_block checkpoint.
+    // Verifies that a newly initialized chain has no `last_processed_block` checkpoint.
     #[test]
     fn fresh_chain_has_no_last_processed_block() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;
@@ -229,7 +230,7 @@ mod tests {
         Ok(())
     }
 
-    /// Verifies that a saved last_processed_block checkpoint is loaded back correctly.
+    // Verifies that a saved `last_processed_block` checkpoint is loaded back correctly.
     #[test]
     fn saved_last_processed_block_is_loaded() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;
@@ -246,7 +247,7 @@ mod tests {
         Ok(())
     }
 
-    /// Verifies that loading a checkpoint fails when the chain state has not been initialized.
+    // Verifies that loading a checkpoint fails when the chain state has not been initialized.
     #[test]
     fn loading_checkpoint_for_unknown_chain_returns_error() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;
@@ -260,7 +261,7 @@ mod tests {
         Ok(())
     }
 
-    /// Verifies that a negative persisted checkpoint is rejected because block numbers are unsigned.
+    // Verifies that a negative persisted checkpoint is rejected because block numbers are unsigned.
     #[test]
     fn negative_last_processed_block_returns_error() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;
@@ -280,7 +281,7 @@ mod tests {
         Ok(())
     }
 
-    /// Verifies that saving a new checkpoint replaces the previous block for the same chain.
+    // Verifies that saving a new checkpoint replaces the previous block for the same chain.
     #[test]
     fn saving_last_processed_block_overwrites_existing_checkpoint() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;
@@ -298,7 +299,7 @@ mod tests {
         Ok(())
     }
 
-    /// Verifies that saving a checkpoint fails when no state row exists for the requested chain.
+    // Verifies that saving a checkpoint fails when no state row exists for the requested chain.
     #[test]
     fn saving_checkpoint_for_unknown_chain_returns_error() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;
@@ -312,7 +313,7 @@ mod tests {
         Ok(())
     }
 
-    /// Verifies that block numbers too large for SQLite INTEGER fail instead of being silently narrowed.
+    // Verifies that block numbers too large for SQLite `INTEGER` fail instead of being silently narrowed.
     #[test]
     fn oversized_last_processed_block_returns_error() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;

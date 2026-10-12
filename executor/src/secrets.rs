@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{error::Error, path::Path};
 
 /// Stores the executor's private runtime secrets.
 pub(crate) struct Secrets {
@@ -7,8 +7,8 @@ pub(crate) struct Secrets {
 }
 
 impl Secrets {
-    /// Loads required executor secrets from the .env file.
-    pub(crate) fn from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+    /// Loads required executor secrets from the `.env` file.
+    pub(crate) fn from_file(path: &Path) -> Result<Self, Box<dyn Error>> {
         let mut rpc_url: Option<String> = None;
         let mut private_key: Option<String> = None;
 
@@ -18,7 +18,7 @@ impl Secrets {
             match key.as_str() {
                 "RPC_URL" => rpc_url = Some(value),
                 "PRIVATE_KEY" => private_key = Some(value),
-                // Ignores unrelated .env entries.
+                // Ignores unrelated `.env` entries.
                 _ => {}
             }
         }
@@ -41,12 +41,12 @@ impl Secrets {
         })
     }
 
-    /// Returns the configured RPC_URL.
+    /// Returns the configured `RPC_URL`.
     pub(crate) fn rpc_url(&self) -> &str {
         &self.rpc_url
     }
 
-    /// Returns the configured PRIVATE_KEY.
+    /// Returns the configured `PRIVATE_KEY`.
     pub(crate) fn private_key(&self) -> &str {
         &self.private_key
     }
@@ -56,7 +56,7 @@ impl Secrets {
 mod tests {
     use super::Secrets;
 
-    /// Verifies that valid executor secrets load from the .env file.
+    // Verifies that valid executor secrets load from the `.env` file.
     #[test]
     fn load_executor_secrets_from_file() {
         let path = std::env::temp_dir().join("executor-secrets.env");
@@ -77,7 +77,7 @@ PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
         );
     }
 
-    /// Verifies that a missing .env file returns an error.
+    // Verifies that a missing `.env` file returns an error.
     #[test]
     fn load_executor_secrets_from_missing_file_returns_error() {
         let path = std::env::temp_dir().join("executor-secrets-missing.env");
@@ -89,7 +89,7 @@ PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
         assert!(result.is_err());
     }
 
-    /// Verifies that malformed dotenv syntax returns an error.
+    // Verifies that malformed dotenv syntax returns an error.
     #[test]
     fn load_executor_secrets_from_malformed_file_returns_error() {
         let path = std::env::temp_dir().join("executor-secrets-malformed.env");
@@ -107,7 +107,7 @@ PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
         assert!(result.is_err());
     }
 
-    /// Verifies that unrecognized dotenv values are ignored.
+    // Verifies that unrecognized dotenv values are ignored.
     #[test]
     fn load_executor_secrets_ignores_unrecognized_values() {
         let path = std::env::temp_dir().join("executor-secrets-unrecognized.env");
@@ -129,7 +129,7 @@ PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
         );
     }
 
-    /// Verifies that RPC_URL is required.
+    // Verifies that `RPC_URL` is required.
     #[test]
     fn load_executor_secrets_without_rpc_url_returns_error() {
         let path = std::env::temp_dir().join("executor-secrets-missing-rpc-url.env");
@@ -145,7 +145,7 @@ PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
         assert!(result.is_err());
     }
 
-    /// Verifies that an empty RPC_URL returns an error.
+    // Verifies that an empty `RPC_URL` returns an error.
     #[test]
     fn load_executor_secrets_with_empty_rpc_url_returns_error() {
         let path = std::env::temp_dir().join("executor-secrets-empty-rpc-url.env");
@@ -162,7 +162,7 @@ PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
         assert!(result.is_err());
     }
 
-    /// Verifies that PRIVATE_KEY required.
+    // Verifies that `PRIVATE_KEY` is required.
     #[test]
     fn load_executor_secrets_without_private_key_returns_error() {
         let path = std::env::temp_dir().join("executor-secrets-missing-private-key.env");
@@ -178,7 +178,7 @@ RPC_URL=https://example.com
         assert!(result.is_err());
     }
 
-    /// Verifies that an empty PRIVATE_KEY returns an error.
+    // Verifies that an empty `PRIVATE_KEY` returns an error.
     #[test]
     fn load_executor_secrets_with_empty_private_key_returns_error() {
         let path = std::env::temp_dir().join("executor-secrets-empty-private-key.env");

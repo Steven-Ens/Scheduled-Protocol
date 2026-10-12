@@ -1,13 +1,17 @@
+use std::{
+    error::Error,
+    path::{Path, PathBuf},
+};
+
 use alloy::primitives::Address;
 use serde::Deserialize;
-use std::path::{Path, PathBuf};
 
 /// Stores the executor's runtime configuration.
 #[derive(Deserialize)]
 pub(crate) struct Config {
     chain_id: u64,
     scheduled_protocol_address: Address,
-    // Immutable historical backfill floor, set to the ScheduledProtocol deployment block.
+    // Immutable historical backfill floor, set to the `ScheduledProtocol` deployment block.
     start_block: u64,
     poll_interval_seconds: u64,
     database_path: PathBuf,
@@ -15,7 +19,7 @@ pub(crate) struct Config {
 
 impl Config {
     /// Load executor configuration from a TOML file.
-    pub(crate) fn from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+    pub(crate) fn from_file(path: &Path) -> Result<Self, Box<dyn Error>> {
         let contents = std::fs::read_to_string(path)?;
         let config = Self::from_toml_str(&contents)?;
         Ok(config)
@@ -31,9 +35,14 @@ impl Config {
         self.chain_id
     }
 
-    /// Returns the configured ScheduledProtocol address.
+    /// Returns the configured `ScheduledProtocol` address.
     pub(crate) fn scheduled_protocol_address(&self) -> Address {
         self.scheduled_protocol_address
+    }
+
+    /// Returns the configured start block.
+    pub(crate) fn start_block(&self) -> u64 {
+        self.start_block
     }
 
     /// Returns the configured database path.
@@ -44,11 +53,13 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
-    use super::Config;
-    use alloy::primitives::address;
     use std::path::PathBuf;
 
-    /// Verifies that executor configuration loads from a TOML file.
+    use alloy::primitives::address;
+
+    use super::Config;
+
+    // Verifies that executor configuration loads from a TOML file.
     #[test]
     fn load_executor_config_from_file() {
         let path = std::env::temp_dir().join("executor-config.toml");
@@ -80,7 +91,7 @@ database_path = "executor.db"
         assert!(result.is_err());
     }
 
-    /// Verifies that invalid executor TOML returns a deserialization error.
+    // Verifies that invalid executor TOML returns a deserialization error.
     #[test]
     fn load_executor_config_from_invalid_toml_returns_error() {
         let path = std::env::temp_dir().join("executor-config-invalid.toml");
@@ -100,7 +111,7 @@ database_path = "executor.db"
         assert!(result.is_err());
     }
 
-    /// Verifies that valid executor TOML parses into `Config`.
+    // Verifies that valid executor TOML parses into `Config`.
     #[test]
     fn parse_executor_config_from_toml() {
         let toml = r#"

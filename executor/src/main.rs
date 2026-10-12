@@ -1,14 +1,21 @@
 mod config;
-mod secrets;
-mod rpc;
-mod storage;
 mod contract;
+mod rpc;
+mod secrets;
+mod storage;
 
-use std::path::Path;
-use alloy::primitives::U256;
+use std::{
+    error::Error,
+    path::Path,
+};
+
+use alloy::{
+    primitives::U256,
+    providers::Provider,
+};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn Error>> {
     let config = config::Config::from_file(Path::new("executor.toml"))?;
     let secrets = secrets::Secrets::from_file(Path::new(".env"))?;
 
@@ -26,6 +33,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let last_processed_block = storage::load_last_processed_block(&connection,config.chain_id())?;
     println!("Last processed block: {last_processed_block:?}");
 
+    let from_block: u64 = next_scan_start(config.start_block(), last_processed_block)?;
+    let latest_block: u64 = provider.get_block_number().await?;
+
+    if from_block <= latest_block {
+        let payment_created_events = contract::get_payment_created_events(
+            &provider,
+            config.scheduled_protocol_address(),
+            from_block,
+            latest_block,
+        )
+        .await?;
+
+        for event in payment_created_events {
+            println!("Discovered payment ID: {}", event.paymentId);
+        }
+    }
+
     // Testing
 
     storage::save_last_processed_block(
@@ -40,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let payment_id = U256::from(1);
     let payment_status = contract::get_payment_status(
         config.scheduled_protocol_address(),
-        provider,
+        &provider,
         payment_id,
     )
     .await?;
@@ -55,4 +79,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Payment {payment_id} Status: {status}");
 
     Ok(())
+}
+
+/// Returns the first block the executor should scan from based on its persisted checkpoint.
+fn next_scan_start(
+    configured_start_block: u64,
+    last_processed_block: Option<u64>,
+) -> Result<u64, std::io::Error> {
+    match last_processed_block {
+        // Resume from the block after `last_processed_block`, which was already processed successfully.
+        Some(last_processed_block) => last_processed_block.checked_add(1).ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "last processed block cannot be incremented",
+            )
+        }),
+        None => Ok(configured_start_block),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::error::Error;
+
+    use super::next_scan_start;
+
+    const START_BLOCK: u64 = 315_846_171;
+
+    // Verifies that a fresh executor begins scanning from its configured historical floor.
+    #[test]
+    fn no_checkpoint_starts_from_configured_start_block() -> Result<(), Box<dyn Error>> {
+        let scan_start = next_scan_start(START_BLOCK, None)?;
+
+        assert_eq!(scan_start, START_BLOCK);
+
+        Ok(())
+    }
+
+    // Verifies that an existing checkpoint resumes scanning from the following block.
+    #[test]
+    fn checkpoint_starts_from_next_block() -> Result<(), Box<dyn Error>> {
+        let scan_start = next_scan_start(START_BLOCK, Some(START_BLOCK))?;
+
+        assert_eq!(scan_start, START_BLOCK + 1);
+
+        Ok(())
+    }
+
+    // Verifies that advancing an impossible maximum checkpoint fails instead of overflowing.
+    #[test]
+    fn maximum_checkpoint_returns_error() {
+        let result = next_scan_start(START_BLOCK, Some(u64::MAX));
+
+        assert!(result.is_err());
+    }
 }
