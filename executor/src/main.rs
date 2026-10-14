@@ -16,6 +16,8 @@ use alloy::{
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    // Load executor configuration and secrets, connect to the configured chain, then open and
+    // initialize the persistent SQLite state.
     let config = config::Config::from_file(Path::new("executor.toml"))?;
     let secrets = secrets::Secrets::from_file(Path::new(".env"))?;
 
@@ -31,11 +33,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     storage::initialize_chain_state(&connection, config.chain_id(),)?;
 
     let last_processed_block = storage::load_last_processed_block(&connection,config.chain_id())?;
-    println!("Last processed block: {last_processed_block:?}");
+    println!("Last Processed Block: {last_processed_block:?}");
 
     let from_block: u64 = next_scan_start(config.start_block(), last_processed_block)?;
     let latest_block: u64 = provider.get_block_number().await?;
 
+    // Only scan when there are unprocessed blocks. A fresh deployment begins at `start_block`
+    // otherwise scanning resumes from the block after the checkpoint.
     if from_block <= latest_block {
         let payment_created_events = contract::get_payment_created_events(
             &provider,
@@ -45,38 +49,52 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .await?;
 
+        // Persist every discovered payment before advancing the block checkpoint. Candidate
+        // insertion is idempotent, so rescanning the same block range after a failure cannot create
+        // duplicate candidate rows.
         for event in payment_created_events {
-            println!("Discovered payment ID: {}", event.paymentId);
+            storage::insert_candidate(&connection, event.paymentId)?;
+            println!("Discovered Payment ID: {}", event.paymentId);
         }
+
+        // Advance the checkpoint only after the entire scanned range has succeeded and all
+        // discovered candidates have been persisted.
+        storage::save_last_processed_block(
+            &connection,
+            config.chain_id(),
+            latest_block,
+        )?;
     }
 
-    // Testing
+    // Load candidates outside the scan block so previously persisted payments are still processed
+    // even when there are no new blocks or `PaymentCreated` events.
+    let candidate_payment_ids: Vec<U256> = storage::load_candidates(&connection)?;
 
-    storage::save_last_processed_block(
-        &connection,
-        config.chain_id(),
-        316206160,
-    )?;
+    for payment_id in candidate_payment_ids {
+        let payment_status = contract::get_payment_status(
+            config.scheduled_protocol_address(),
+            &provider,
+            payment_id,
+        )
+        .await?;
 
-    let last_processed_block = storage::load_last_processed_block(&connection, config.chain_id())?;
-    println!("Last processed block: {last_processed_block:?}");
+        // `Active` payments remain candidates for later execution. Terminal payment states no
+        // longer need to be tracked by the executor.
+        match payment_status {
+            contract::IScheduledProtocol::PaymentStatus::Active => {
+                println!("Active Candidate Payment ID: {payment_id}");
+            }
+            contract::IScheduledProtocol::PaymentStatus::Cancelled |
+            contract::IScheduledProtocol::PaymentStatus::Completed => {
+                storage::remove_candidate(&connection, payment_id)?;
 
-    let payment_id = U256::from(1);
-    let payment_status = contract::get_payment_status(
-        config.scheduled_protocol_address(),
-        &provider,
-        payment_id,
-    )
-    .await?;
-
-    let status = match payment_status {
-        contract::IScheduledProtocol::PaymentStatus::Active => "Active",
-        contract::IScheduledProtocol::PaymentStatus::Cancelled => "Cancelled",
-        contract::IScheduledProtocol::PaymentStatus::Completed => "Completed",
-        _ => "Invalid",
-    };
-
-    println!("Payment {payment_id} Status: {status}");
+                println!("Removed Candidate Payment ID: {payment_id}");
+            }
+            _ => {
+                println!("Invalid Payment Status for Payment ID: {payment_id}");
+            }
+        }
+    }
 
     Ok(())
 }

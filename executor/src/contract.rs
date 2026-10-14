@@ -60,14 +60,21 @@ pub(crate) async fn get_payment_created_events(
         .from_block(from_block)
         .to_block(to_block);
 
-    // Create a typed `PaymentCreated` query, fetch and decode matching logs, discard each raw log,
-    // and collect the decoded events into a `Vec`.
     let events =
+        // Build a typed `PaymentCreated` query object from the `provider` and `filter`. `query()` returns
+        // `(PaymentCreated, Log)` pairs for each matching log.
         Event::<_, IScheduledProtocol::PaymentCreated>::new(provider, filter)
         .query()
         .await?
+        // `into_iter()` creates the base iterator that yields each `(PaymentCreated, Log)` pair.
+        // `map()` wraps that iterator with a transformation that keeps only `PaymentCreated`.
+        // `collect()` drives the wrapped iterator, repeatedly pulling and transforming each pair
+        // until all decoded events have been collected.
         .into_iter()
-        .map(|(event, _log)| event)
+        .map(|pair| {
+            let (event, _log) = pair;
+            event
+        })
         .collect();
 
     Ok(events)

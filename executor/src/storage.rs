@@ -1,5 +1,7 @@
 use std::{error::Error, path::Path};
 
+use alloy::primitives::U256;
+
 use rusqlite::{Connection, OptionalExtension};
 
 /// Opens the executor's SQLite database, creating the database file if it does not exist.
@@ -109,6 +111,65 @@ pub(crate) fn save_last_processed_block(
     Ok(())
 }
 
+/// Inserts `payment_id` into candidate storage if it is not already present.
+pub(crate) fn insert_candidate(
+    connection: &Connection,
+    payment_id: U256,
+) -> Result<(), Box<dyn Error>> {
+    // Store the full `uint256` identifier as decimal text because SQLite `INTEGER` is signed 64-bit.
+    let payment_id = payment_id.to_string();
+
+    connection.execute(
+        "INSERT INTO candidate_payments (payment_id)
+         VALUES (?1)
+         ON CONFLICT(payment_id) DO NOTHING",
+        [payment_id],
+    )?;
+
+    Ok(())
+}
+
+/// Loads all persisted candidate payment IDs.
+pub(crate) fn load_candidates(connection: &Connection) -> Result<Vec<U256>, Box<dyn Error>> {
+    // Prepare the SQL statement by borrowing the `Connection` for a compiler-inferred lifetime, so
+    // it can't outlive the connection it uses.
+    let mut statement = connection.prepare("SELECT payment_id FROM candidate_payments")?;
+    // `MappedRows` owns both the mapping closure, and the `Rows` value returned by the internal `query()` call.
+    // Because `Rows` borrows the prepared `Statement`, `MappedRows` must carry the same lifetime.
+    let rows = statement.query_map([], |row| row.get::<_, String>("payment_id"))?;
+
+    let mut candidates: Vec<U256> = Vec::new();
+    // Each time iteration advances, `MappedRows` asks its internal `Rows` value for the next
+    // borrowed `&Row`, then calls `F(&Row)` so the closure can extract that row's `payment_id`.
+    for row in rows {
+        let payment_id: String = row?;
+        // Candidate IDs are stored as canonical decimal text, so parse them back into `U256`. A
+        // radix of `10` means the text is interpreted as base-10 decimal.
+        let payment_id: U256 = U256::from_str_radix(&payment_id, 10)?;
+
+        candidates.push(payment_id);
+    }
+
+    Ok(candidates)
+}
+
+/// Removes `payment_id` from candidate storage if it is present.
+pub(crate) fn remove_candidate(
+    connection: &Connection,
+    payment_id: U256,
+) -> Result<(), Box<dyn Error>> {
+    // Candidate IDs are stored as canonical decimal text, so convert `payment_id` to the same
+    // representation used by candidate storage.
+    let payment_id = payment_id.to_string();
+
+    connection.execute(
+        "DELETE FROM candidate_payments WHERE payment_id = ?1",
+        [payment_id],
+    )?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,7 +201,7 @@ mod tests {
         initialize_chain_state(&connection, 421614)?;
         initialize_chain_state(&connection, 421614)?;
 
-        // `COUNT(*)` returns one result row containing the table's row count, so column 0 is that count.
+        // `COUNT(*)` returns one result row whose first column contains the total row count.
         let row_count: i64 =
             connection.query_row("SELECT COUNT(*) FROM executor_state", [], |row| row.get(0))?;
 
@@ -324,6 +385,155 @@ mod tests {
         let result = save_last_processed_block(&connection, 421614, u64::MAX);
 
         assert!(result.is_err());
+
+        Ok(())
+    }
+
+    // Verifies that a newly discovered payment ID is persisted as a candidate.
+    #[test]
+    fn candidate_is_inserted() -> Result<(), Box<dyn Error>> {
+        let connection = Connection::open_in_memory()?;
+
+        initialize_schema(&connection)?;
+
+        let payment_id = U256::from(0);
+        let expected_payment_id = payment_id.to_string();
+
+        insert_candidate(&connection, payment_id)?;
+
+        let stored_payment_id: String =
+            connection.query_row("SELECT payment_id FROM candidate_payments", [], |row| {
+                row.get("payment_id")
+            })?;
+
+        assert_eq!(stored_payment_id, expected_payment_id);
+
+        Ok(())
+    }
+
+    // Verifies that rediscovering the same payment ID does not create a duplicate candidate.
+    #[test]
+    fn duplicate_candidate_is_ignored() -> Result<(), Box<dyn Error>> {
+        let connection = Connection::open_in_memory()?;
+
+        initialize_schema(&connection)?;
+
+        insert_candidate(&connection, U256::from(1))?;
+        insert_candidate(&connection, U256::from(1))?;
+
+        // `COUNT(*)` returns one result row whose first column contains the total row count.
+        let row_count: i64 =
+            connection.query_row("SELECT COUNT(*) FROM candidate_payments", [], |row| {
+                row.get(0)
+            })?;
+
+        assert_eq!(row_count, 1);
+
+        Ok(())
+    }
+
+    // Verifies that a full-width `U256` payment ID is stored losslessly as decimal text.
+    #[test]
+    fn maximum_u256_candidate_is_stored_as_text() -> Result<(), Box<dyn Error>> {
+        let connection = Connection::open_in_memory()?;
+
+        initialize_schema(&connection)?;
+
+        let payment_id = U256::MAX;
+        let expected_payment_id = payment_id.to_string();
+
+        insert_candidate(&connection, payment_id)?;
+
+        let stored_payment_id: String =
+            connection.query_row("SELECT payment_id FROM candidate_payments", [], |row| {
+                row.get("payment_id")
+            })?;
+
+        assert_eq!(stored_payment_id, expected_payment_id);
+
+        Ok(())
+    }
+
+    // Verifies that loading from an empty candidate table returns an empty collection.
+    #[test]
+    fn no_candidates_returns_empty_collection() -> Result<(), Box<dyn Error>> {
+        let connection = Connection::open_in_memory()?;
+        initialize_schema(&connection)?;
+
+        let candidates = load_candidates(&connection)?;
+
+        assert!(candidates.is_empty());
+
+        Ok(())
+    }
+
+    // Verifies that persisted candidate payment IDs are loaded back as `U256` values.
+    #[test]
+    fn candidates_are_loaded() -> Result<(), Box<dyn Error>> {
+        let connection = Connection::open_in_memory()?;
+        initialize_schema(&connection)?;
+
+        let first_payment_id = U256::from(0_u64);
+        let second_payment_id = U256::from(1_u64);
+
+        insert_candidate(&connection, first_payment_id)?;
+        insert_candidate(&connection, second_payment_id)?;
+
+        let candidates = load_candidates(&connection)?;
+
+        assert_eq!(candidates.len(), 2);
+        assert!(candidates.contains(&first_payment_id));
+        assert!(candidates.contains(&second_payment_id));
+
+        Ok(())
+    }
+
+    // Verifies that invalid persisted payment ID text is rejected when loading candidates.
+    #[test]
+    fn invalid_candidate_payment_id_returns_error() -> Result<(), Box<dyn Error>> {
+        let connection = Connection::open_in_memory()?;
+        initialize_schema(&connection)?;
+
+        connection.execute(
+            "INSERT INTO candidate_payments (payment_id)
+             VALUES (?1)",
+            ["invalid-payment-id"],
+        )?;
+
+        let result = load_candidates(&connection);
+
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    // Verifies that a persisted candidate payment ID can be removed.
+    #[test]
+    fn candidate_is_removed() -> Result<(), Box<dyn Error>> {
+        let connection = Connection::open_in_memory()?;
+        initialize_schema(&connection)?;
+
+        let payment_id = U256::from(0_u64);
+
+        insert_candidate(&connection, payment_id)?;
+        remove_candidate(&connection, payment_id)?;
+
+        let candidates = load_candidates(&connection)?;
+
+        assert!(!candidates.contains(&payment_id));
+
+        Ok(())
+    }
+
+    // Verifies that removing a candidate that is not persisted succeeds without error.
+    #[test]
+    fn missing_candidate_is_ignored() -> Result<(), Box<dyn Error>> {
+        let connection = Connection::open_in_memory()?;
+        initialize_schema(&connection)?;
+
+        let payment_id = U256::from(0_u64);
+
+        remove_candidate(&connection, payment_id)?;
 
         Ok(())
     }
