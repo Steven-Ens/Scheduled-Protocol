@@ -10,8 +10,8 @@ use std::{
 };
 
 use alloy::{
-    primitives::U256,
-    providers::Provider,
+    primitives::{U256, Address},
+    providers::{DynProvider, Provider},
 };
 
 #[tokio::main]
@@ -21,11 +21,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = config::Config::from_file(Path::new("executor.toml"))?;
     let secrets = secrets::Secrets::from_file(Path::new(".env"))?;
 
-    let provider = rpc::connect_and_validate(
-        secrets.rpc_url(),
-        secrets.private_key(),
-        config.chain_id()
-    )
+    let (provider, executor_address): (DynProvider, Address) =
+        rpc::connect_and_validate(
+            secrets.rpc_url(),
+            secrets.private_key(),
+            config.chain_id()
+        )
     .await?;
 
     let connection = storage::open_database(config.database_path())?;
@@ -82,7 +83,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // longer need to be tracked by the executor.
         match payment_status {
             contract::IScheduledProtocol::PaymentStatus::Active => {
-                println!("Active Candidate Payment ID: {payment_id}");
+                let can_execute: bool = contract::simulate_execute_payment(
+                    config.scheduled_protocol_address(),
+                    &provider,
+                    executor_address,
+                    payment_id,
+                )
+                .await?;
+
+                if can_execute {
+                    println!("Executable Candidate Payment ID: {payment_id}");
+                } else {
+                    println!("Candidate Payment ID {payment_id} is not executable yet");
+                }
             }
             contract::IScheduledProtocol::PaymentStatus::Cancelled |
             contract::IScheduledProtocol::PaymentStatus::Completed => {

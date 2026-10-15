@@ -1,6 +1,7 @@
 use std::error::Error;
 
 use alloy::{
+    primitives::Address,
     providers::{DynProvider, Provider, ProviderBuilder},
     signers::local::PrivateKeySigner,
 };
@@ -10,8 +11,9 @@ pub(crate) async fn connect_and_validate(
     rpc_url: &str,
     private_key: &str,
     configured_chain_id: u64,
-) -> Result<DynProvider, Box<dyn Error>> {
+) -> Result<(DynProvider, Address), Box<dyn Error>> {
     let signer: PrivateKeySigner = private_key.parse()?;
+    let executor_address: Address = signer.address();
 
     let provider = ProviderBuilder::new()
         .wallet(signer)
@@ -23,7 +25,7 @@ pub(crate) async fn connect_and_validate(
     validate_chain_id(configured_chain_id, rpc_chain_id)?;
 
     // Erases the specific `FillProvider` type so it can be passed between modules as `DynProvider`.
-    Ok(provider.erased())
+    Ok((provider.erased(), executor_address))
 }
 
 /// Validates that the connected RPC matches the configured chain.

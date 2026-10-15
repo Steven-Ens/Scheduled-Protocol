@@ -39,6 +39,8 @@ sol! {
             uint32 totalOccurrences
         );
 
+        function executePayment(uint256 paymentId) external;
+
         function getPaymentStatus(uint256 paymentId)
             external
             view
@@ -92,4 +94,30 @@ pub(crate) async fn get_payment_status(
     let payment_status = contract.getPaymentStatus(payment_id).call().await?;
 
     Ok(payment_status)
+}
+
+/// Simulates `executePayment` for `payment_id` without broadcasting a transaction.
+pub(crate) async fn simulate_execute_payment(
+    scheduled_protocol_address: Address,
+    provider: &DynProvider,
+    executor_address: Address,
+    payment_id: U256,
+) -> Result<bool, Box<dyn Error>> {
+    let contract = IScheduledProtocol::new(scheduled_protocol_address, provider);
+
+    let result = contract
+        .executePayment(payment_id)
+        .from(executor_address)
+        .call()
+        .await;
+
+    // Inspect the simulation `Result` directly instead of propagating it with `?`. A successful
+    // call means `executePayment` would currently succeed. If Alloy exposes revert data, the
+    // contract execution reverted, so the payment is not currently executable. Other errors are
+    // unexpected infrastructure/decoding failures and are propogated to the caller.
+    match result {
+        Ok(_) => Ok(true),
+        Err(error) if error.as_revert_data().is_some() => Ok(false),
+        Err(error) => Err(Box::new(error)),
+    }
 }
