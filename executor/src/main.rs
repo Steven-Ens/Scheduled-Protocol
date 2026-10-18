@@ -12,6 +12,7 @@ use std::{
 use alloy::{
     primitives::{U256, Address},
     providers::{DynProvider, Provider},
+    rpc::types::TransactionReceipt,
 };
 
 #[tokio::main]
@@ -83,6 +84,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // longer need to be tracked by the executor.
         match payment_status {
             contract::IScheduledProtocol::PaymentStatus::Active => {
+                const MAX_EXECUTION_COST_WEI: u128 = 327_000_000_000_000;
+
                 let can_execute: bool = contract::simulate_execute_payment(
                     config.scheduled_protocol_address(),
                     &provider,
@@ -92,7 +95,37 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .await?;
 
                 if can_execute {
-                    println!("Executable Candidate Payment ID: {payment_id}");
+                    let estimated_cost_wei: u128 = contract::estimate_execute_payment_cost(
+                        config.scheduled_protocol_address(),
+                        &provider,
+                        executor_address,
+                        payment_id,
+                    )
+                    .await?;
+
+                    println!(
+                        "Estimated Execution Cost for Payment ID {payment_id}: {estimated_cost_wei} Wei");
+
+                    // Temporary profitability check using a manually calculated wei value
+                    // equivalent to approximately $0.80 at the current ETH/USD price.
+                    if estimated_cost_wei < MAX_EXECUTION_COST_WEI {
+                        println!("Profitable Candidate Payment ID: {payment_id}");
+
+                    let receipt = contract::execute_payment(
+                        config.scheduled_protocol_address(),
+                        &provider,
+                        executor_address,
+                        payment_id,
+                    )
+                    .await?;
+
+                    println!(
+                        "Executed Payment ID {payment_id}: {}",
+                        receipt.transaction_hash
+                    );
+                    } else {
+                        println!("Unprofitable Candidate Payment ID: {payment_id}");
+                    }
                 } else {
                     println!("Candidate Payment ID {payment_id} is not executable yet");
                 }
