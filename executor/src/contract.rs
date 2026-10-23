@@ -64,7 +64,7 @@ pub(crate) async fn get_payment_created_events(
         .to_block(to_block);
 
     let events =
-        // Build a typed `PaymentCreated` query object from the `provider` and `filter`. `query()` 
+        // Build a typed `PaymentCreated` query object from the `provider` and `filter`. `query()`
         // returns `(PaymentCreated, Log)` pairs for each matching log.
         Event::<_, IScheduledProtocol::PaymentCreated>::new(provider, filter)
         .query()

@@ -1,12 +1,13 @@
 mod config;
 mod contract;
+mod oracle;
 mod rpc;
 mod secrets;
 mod storage;
 
 use std::{error::Error, path::Path};
 
-use alloy::providers::Provider;
+use alloy::{primitives::utils::format_units, providers::Provider};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -18,6 +19,29 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (provider, executor_address) =
         rpc::connect_and_validate(secrets.rpc_url(), secrets.private_key(), config.chain_id())
             .await?;
+
+    // Run: $ cargo run -- --oracle-check
+    if std::env::args().any(|argument| argument == "--oracle-check") {
+        for (name, address) in [
+            ("ETH/USD", "0xd30e2101a97dcbAeBCBC04F14C3f624E67A35165"),
+            ("USDC/USD", "0x0153002d20B96532C639313c2d54c3dA09109309"),
+        ] {
+            let feed_address = address.parse::<alloy::primitives::Address>()?;
+
+            let round = oracle::get_latest_round_data(&provider, feed_address).await?;
+
+            let decimals = oracle::get_feed_decimals(&provider, feed_address).await?;
+
+            let price = format_units(round.answer, decimals)?;
+
+            println!(
+                "{name}: ${price}, decimals={decimals}, updatedAt={}",
+                round.updatedAt
+            );
+        }
+
+        return Ok(());
+    }
 
     let connection = storage::open_database(config.database_path())?;
     storage::initialize_schema(&connection)?;
