@@ -1,7 +1,6 @@
 use std::{error::Error, path::Path};
 
 use alloy::primitives::U256;
-
 use rusqlite::{Connection, OptionalExtension};
 
 /// Opens the executor's SQLite database, creating the database file if it does not exist.
@@ -116,7 +115,8 @@ pub(crate) fn insert_candidate(
     connection: &Connection,
     payment_id: U256,
 ) -> Result<(), Box<dyn Error>> {
-    // Store the full `uint256` identifier as decimal text because SQLite `INTEGER` is signed 64-bit.
+    // Store the full `uint256` identifier as decimal text because SQLite `INTEGER` is signed
+    // 64-bit.
     let payment_id = payment_id.to_string();
 
     connection.execute(
@@ -134,18 +134,19 @@ pub(crate) fn load_candidates(connection: &Connection) -> Result<Vec<U256>, Box<
     // Prepare the SQL statement by borrowing the `Connection` for a compiler-inferred lifetime, so
     // it can't outlive the connection it uses.
     let mut statement = connection.prepare("SELECT payment_id FROM candidate_payments")?;
-    // `MappedRows` owns both the mapping closure, and the `Rows` value returned by the internal `query()` call.
-    // Because `Rows` borrows the prepared `Statement`, `MappedRows` must carry the same lifetime.
+    // `MappedRows` owns both the mapping closure, and the `Rows` value returned by the internal
+    // `query()` call. Because `Rows` borrows the prepared `Statement`, `MappedRows` must carry
+    // the same lifetime.
     let rows = statement.query_map([], |row| row.get::<_, String>("payment_id"))?;
 
-    let mut candidates: Vec<U256> = Vec::new();
+    let mut candidates = Vec::new();
     // Each time iteration advances, `MappedRows` asks its internal `Rows` value for the next
     // borrowed `&Row`, then calls `F(&Row)` so the closure can extract that row's `payment_id`.
     for row in rows {
-        let payment_id: String = row?;
+        let payment_id = row?;
         // Candidate IDs are stored as canonical decimal text, so parse them back into `U256`. A
         // radix of `10` means the text is interpreted as base-10 decimal.
-        let payment_id: U256 = U256::from_str_radix(&payment_id, 10)?;
+        let payment_id = U256::from_str_radix(&payment_id, 10)?;
 
         candidates.push(payment_id);
     }
@@ -192,7 +193,8 @@ mod tests {
         Ok(())
     }
 
-    // Verifies that reinitializing with the same chain ID succeeds without creating duplicate state.
+    // Verifies that reinitializing with the same chain ID succeeds without creating duplicate
+    // state.
     #[test]
     fn matching_chain_id_is_accepted() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;
@@ -374,7 +376,8 @@ mod tests {
         Ok(())
     }
 
-    // Verifies that block numbers too large for SQLite `INTEGER` fail instead of being silently narrowed.
+    // Verifies that block numbers too large for SQLite `INTEGER` fail instead of being silently
+    // narrowed.
     #[test]
     fn oversized_last_processed_block_returns_error() -> Result<(), Box<dyn Error>> {
         let connection = Connection::open_in_memory()?;

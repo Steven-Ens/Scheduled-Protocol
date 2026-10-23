@@ -9,7 +9,7 @@ use alloy::{
     sol_types::SolEvent,
 };
 
-// Generates type-safe Rust types for the `ScheduledProtol` ABI.
+// Generates type-safe Rust types for the `ScheduledProtocol` ABI.
 sol! {
     /// `ScheduledProtocol` contract binding used by the executor.
     #[sol(rpc)]
@@ -57,14 +57,15 @@ pub(crate) async fn get_payment_created_events(
 ) -> Result<Vec<IScheduledProtocol::PaymentCreated>, Box<dyn Error>> {
     let filter = Filter::new()
         .address(scheduled_protocol_address)
-        // `topic0` is the keccak256 hash of the event signature, so this filters specifically for `PaymentCreated` logs.
+        // `topic0` is the keccak256 hash of the event signature, so this filters specifically for
+        // `PaymentCreated` logs.
         .event_signature(IScheduledProtocol::PaymentCreated::SIGNATURE_HASH)
         .from_block(from_block)
         .to_block(to_block);
 
     let events =
-        // Build a typed `PaymentCreated` query object from the `provider` and `filter`. `query()` returns
-        // `(PaymentCreated, Log)` pairs for each matching log.
+        // Build a typed `PaymentCreated` query object from the `provider` and `filter`. `query()` 
+        // returns `(PaymentCreated, Log)` pairs for each matching log.
         Event::<_, IScheduledProtocol::PaymentCreated>::new(provider, filter)
         .query()
         .await?
@@ -85,11 +86,11 @@ pub(crate) async fn get_payment_created_events(
 /// Reads `getPaymentStatus` from the configured `ScheduledProtocol` deployment for payment
 /// `payment_id`.
 pub(crate) async fn get_payment_status(
-    address: Address,
+    scheduled_protocol_address: Address,
     provider: &DynProvider,
     payment_id: U256,
 ) -> Result<IScheduledProtocol::PaymentStatus, Box<dyn Error>> {
-    let contract = IScheduledProtocol::new(address, provider);
+    let contract = IScheduledProtocol::new(scheduled_protocol_address, provider);
 
     let payment_status = contract.getPaymentStatus(payment_id).call().await?;
 
@@ -114,7 +115,7 @@ pub(crate) async fn simulate_execute_payment(
     // Inspect the simulation `Result` directly instead of propagating it with `?`. A successful
     // call means `executePayment` would currently succeed. If Alloy exposes revert data, the
     // contract execution reverted, so the payment is not currently executable. Other errors are
-    // unexpected failures and are propogated to the caller.
+    // unexpected failures and are propagated to the caller.
     match result {
         Ok(_) => Ok(true),
         Err(error) if error.as_revert_data().is_some() => Ok(false),
@@ -129,7 +130,7 @@ pub(crate) async fn execute_payment(
     executor_address: Address,
     payment_id: U256,
 ) -> Result<TransactionReceipt, Box<dyn Error>> {
-   let contract = IScheduledProtocol::new(scheduled_protocol_address, provider);
+    let contract = IScheduledProtocol::new(scheduled_protocol_address, provider);
 
     // Broadcast the signed `executePayment` transaction. The returned `PendingTransactionBuilder`
     // represents the transaction while Alloy waits for it to be included on-chain.
@@ -140,15 +141,12 @@ pub(crate) async fn execute_payment(
         .await?;
 
     // Wait for the transaction to be confirmed, then fetch its on-chain receipt.
-    let receipt: TransactionReceipt = pending_transaction.get_receipt().await?;
+    let receipt = pending_transaction.get_receipt().await?;
 
     // A mined transaction can still have failed during EVM execution. Only return the receipt when
     // the transaction completed successfully on-chain.
     if !receipt.status() {
-        return Err(std::io::Error::other(
-            "executePayment transaction failed",
-        )
-        .into());
+        return Err(std::io::Error::other("executePayment transaction failed").into());
     }
 
     Ok(receipt)
@@ -163,20 +161,20 @@ pub(crate) async fn estimate_execute_payment_cost(
 ) -> Result<u128, Box<dyn Error>> {
     let contract = IScheduledProtocol::new(scheduled_protocol_address, provider);
 
-    // Estimate the gas required by the same `executePayment` call the executor address would
-    // submit. The executor address would submit. The executor address is included so estimation uses the correct `msg.sender`.
-    let estimated_gas: u64 = contract
+    // Estimate the gas required by `executePayment` using the executor address as `msg.sender`,
+    // matching the transaction that would actually be submitted.
+    let estimated_gas = contract
         .executePayment(payment_id)
         .from(executor_address)
         .estimate_gas()
         .await?;
 
     // Fetch the current gas price in wei per unit of gas.
-    let gas_price: u128 = provider.get_gas_price().await?;
+    let gas_price = provider.get_gas_price().await?;
 
     // Transaction cost is gas used multiplied by the price paid for each unit of gas. Use checked
     // arithmetic so an overflow becomes an explicit error.
-    let estimated_cost_wei: u128 = u128::from(estimated_gas)
+    let estimated_cost_wei = u128::from(estimated_gas)
         .checked_mul(gas_price)
         .ok_or_else(|| std::io::Error::other("estimated execution cost overflow"))?;
 

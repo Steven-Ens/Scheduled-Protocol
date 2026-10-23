@@ -4,16 +4,9 @@ mod rpc;
 mod secrets;
 mod storage;
 
-use std::{
-    error::Error,
-    path::Path,
-};
+use std::{error::Error, path::Path};
 
-use alloy::{
-    primitives::{U256, Address},
-    providers::{DynProvider, Provider},
-    rpc::types::TransactionReceipt,
-};
+use alloy::providers::Provider;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -22,23 +15,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = config::Config::from_file(Path::new("executor.toml"))?;
     let secrets = secrets::Secrets::from_file(Path::new(".env"))?;
 
-    let (provider, executor_address): (DynProvider, Address) =
-        rpc::connect_and_validate(
-            secrets.rpc_url(),
-            secrets.private_key(),
-            config.chain_id()
-        )
-    .await?;
+    let (provider, executor_address) =
+        rpc::connect_and_validate(secrets.rpc_url(), secrets.private_key(), config.chain_id())
+            .await?;
 
     let connection = storage::open_database(config.database_path())?;
     storage::initialize_schema(&connection)?;
-    storage::initialize_chain_state(&connection, config.chain_id(),)?;
+    storage::initialize_chain_state(&connection, config.chain_id())?;
 
-    let last_processed_block = storage::load_last_processed_block(&connection,config.chain_id())?;
+    let last_processed_block = storage::load_last_processed_block(&connection, config.chain_id())?;
     println!("Last Processed Block: {last_processed_block:?}");
 
-    let from_block: u64 = next_scan_start(config.start_block(), last_processed_block)?;
-    let latest_block: u64 = provider.get_block_number().await?;
+    let from_block = next_scan_start(config.start_block(), last_processed_block)?;
+    let latest_block = provider.get_block_number().await?;
 
     // Only scan when there are unprocessed blocks. A fresh deployment begins at `start_block`
     // otherwise scanning resumes from the block after the checkpoint.
@@ -61,16 +50,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         // Advance the checkpoint only after the entire scanned range has succeeded and all
         // discovered candidates have been persisted.
-        storage::save_last_processed_block(
-            &connection,
-            config.chain_id(),
-            latest_block,
-        )?;
+        storage::save_last_processed_block(&connection, config.chain_id(), latest_block)?;
     }
 
     // Load candidates outside the scan block so previously persisted payments are still processed
     // even when there are no new blocks or `PaymentCreated` events.
-    let candidate_payment_ids: Vec<U256> = storage::load_candidates(&connection)?;
+    let candidate_payment_ids = storage::load_candidates(&connection)?;
 
     for payment_id in candidate_payment_ids {
         let payment_status = contract::get_payment_status(
@@ -86,7 +71,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             contract::IScheduledProtocol::PaymentStatus::Active => {
                 const MAX_EXECUTION_COST_WEI: u128 = 327_000_000_000_000;
 
-                let can_execute: bool = contract::simulate_execute_payment(
+                let can_execute = contract::simulate_execute_payment(
                     config.scheduled_protocol_address(),
                     &provider,
                     executor_address,
@@ -95,7 +80,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .await?;
 
                 if can_execute {
-                    let estimated_cost_wei: u128 = contract::estimate_execute_payment_cost(
+                    let estimated_cost_wei = contract::estimate_execute_payment_cost(
                         config.scheduled_protocol_address(),
                         &provider,
                         executor_address,
@@ -104,25 +89,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     .await?;
 
                     println!(
-                        "Estimated Execution Cost for Payment ID {payment_id}: {estimated_cost_wei} Wei");
+                        "Estimated Execution Cost for Payment ID {payment_id}: {estimated_cost_wei} Wei"
+                    );
 
                     // Temporary profitability check using a manually calculated wei value
                     // equivalent to approximately $0.80 at the current ETH/USD price.
                     if estimated_cost_wei < MAX_EXECUTION_COST_WEI {
                         println!("Profitable Candidate Payment ID: {payment_id}");
 
-                    let receipt = contract::execute_payment(
-                        config.scheduled_protocol_address(),
-                        &provider,
-                        executor_address,
-                        payment_id,
-                    )
-                    .await?;
+                        let receipt = contract::execute_payment(
+                            config.scheduled_protocol_address(),
+                            &provider,
+                            executor_address,
+                            payment_id,
+                        )
+                        .await?;
 
-                    println!(
-                        "Executed Payment ID {payment_id}: {}",
-                        receipt.transaction_hash
-                    );
+                        println!(
+                            "Executed Payment ID {payment_id}: {}",
+                            receipt.transaction_hash
+                        );
                     } else {
                         println!("Unprofitable Candidate Payment ID: {payment_id}");
                     }
@@ -130,8 +116,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     println!("Candidate Payment ID {payment_id} is not executable yet");
                 }
             }
-            contract::IScheduledProtocol::PaymentStatus::Cancelled |
-            contract::IScheduledProtocol::PaymentStatus::Completed => {
+            contract::IScheduledProtocol::PaymentStatus::Cancelled
+            | contract::IScheduledProtocol::PaymentStatus::Completed => {
                 storage::remove_candidate(&connection, payment_id)?;
 
                 println!("Removed Candidate Payment ID: {payment_id}");

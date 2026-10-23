@@ -13,7 +13,7 @@ pub(crate) async fn connect_and_validate(
     configured_chain_id: u64,
 ) -> Result<(DynProvider, Address), Box<dyn Error>> {
     let signer: PrivateKeySigner = private_key.parse()?;
-    let executor_address: Address = signer.address();
+    let executor_address = signer.address();
 
     let provider = ProviderBuilder::new()
         .wallet(signer)
@@ -35,7 +35,7 @@ fn validate_chain_id(configured_chain_id: u64, rpc_chain_id: u64) -> Result<(), 
             std::io::ErrorKind::InvalidData,
             format!(
                 "RPC chain ID {rpc_chain_id} does not match configured chain ID {configured_chain_id}"
-            )
+            ),
         ));
     }
 

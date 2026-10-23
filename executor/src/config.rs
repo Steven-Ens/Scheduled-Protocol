@@ -18,7 +18,7 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    /// Load executor configuration from a TOML file.
+    /// Loads executor configuration from a TOML file.
     pub(crate) fn from_file(path: &Path) -> Result<Self, Box<dyn Error>> {
         let contents = std::fs::read_to_string(path)?;
         let config = Self::from_toml_str(&contents)?;
@@ -79,7 +79,7 @@ database_path = "executor.db"
         assert_eq!(config.chain_id, 421614);
     }
 
-    /// Verifies that a missing config file returns an error.
+    // Verifies that a missing config file returns an error.
     #[test]
     fn load_executor_config_from_missing_file_returns_error() {
         let path = std::env::temp_dir().join("executor-config-missing.toml");

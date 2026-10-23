@@ -9,8 +9,8 @@ pub(crate) struct Secrets {
 impl Secrets {
     /// Loads required executor secrets from the `.env` file.
     pub(crate) fn from_file(path: &Path) -> Result<Self, Box<dyn Error>> {
-        let mut rpc_url: Option<String> = None;
-        let mut private_key: Option<String> = None;
+        let mut rpc_url = None;
+        let mut private_key = None;
 
         for item in dotenvy::from_path_iter(path)? {
             let (key, value) = item?;
@@ -61,7 +61,7 @@ mod tests {
     fn load_executor_secrets_from_file() {
         let path = std::env::temp_dir().join("executor-secrets.env");
 
-        let contents: &str = r#"
+        let contents = r#"
 RPC_URL=https://example.com
 PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
 "#;
@@ -94,7 +94,7 @@ PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
     fn load_executor_secrets_from_malformed_file_returns_error() {
         let path = std::env::temp_dir().join("executor-secrets-malformed.env");
 
-        let contents: &str = r#"
+        let contents = r#"
 RPC_URL=https://example.com
 MALFORMED LINE
 PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
@@ -112,7 +112,7 @@ PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
     fn load_executor_secrets_ignores_unrecognized_values() {
         let path = std::env::temp_dir().join("executor-secrets-unrecognized.env");
 
-        let contents: &str = r#"
+        let contents = r#"
 RPC_URL=https://example.com
 UNRECOGNIZED_LINE=IGNORED
 PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
@@ -134,7 +134,7 @@ PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
     fn load_executor_secrets_without_rpc_url_returns_error() {
         let path = std::env::temp_dir().join("executor-secrets-missing-rpc-url.env");
 
-        let contents: &str = r#"
+        let contents = r#"
 PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
 "#;
 
@@ -167,7 +167,7 @@ PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
     fn load_executor_secrets_without_private_key_returns_error() {
         let path = std::env::temp_dir().join("executor-secrets-missing-private-key.env");
 
-        let contents: &str = r#"
+        let contents = r#"
 RPC_URL=https://example.com
 "#;
 
