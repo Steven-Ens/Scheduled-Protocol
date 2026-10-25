@@ -9,12 +9,23 @@ use serde::Deserialize;
 /// Stores the executor's runtime configuration.
 #[derive(Deserialize)]
 pub(crate) struct Config {
+    operator: OperatorConfig,
+    network: NetworkConfig,
+}
+
+/// Stores operator adjustable configuration.
+#[derive(Deserialize)]
+struct OperatorConfig {
+    database_path: PathBuf,
+    poll_interval_seconds: u64,
+}
+
+/// Stores network specific configuration.
+#[derive(Deserialize)]
+struct NetworkConfig {
     chain_id: u64,
     scheduled_protocol_address: Address,
-    // Immutable historical backfill floor, set to the `ScheduledProtocol` deployment block.
     start_block: u64,
-    poll_interval_seconds: u64,
-    database_path: PathBuf,
 }
 
 impl Config {
@@ -30,24 +41,24 @@ impl Config {
         toml::from_str(contents)
     }
 
+    /// Returns the configured database path.
+    pub(crate) fn database_path(&self) -> &Path {
+        &self.operator.database_path
+    }
+
     /// Returns the configured chain ID.
     pub(crate) fn chain_id(&self) -> u64 {
-        self.chain_id
+        self.network.chain_id
     }
 
     /// Returns the configured `ScheduledProtocol` address.
     pub(crate) fn scheduled_protocol_address(&self) -> Address {
-        self.scheduled_protocol_address
+        self.network.scheduled_protocol_address
     }
 
     /// Returns the configured start block.
     pub(crate) fn start_block(&self) -> u64 {
-        self.start_block
-    }
-
-    /// Returns the configured database path.
-    pub(crate) fn database_path(&self) -> &Path {
-        &self.database_path
+        self.network.start_block
     }
 }
 
@@ -65,18 +76,21 @@ mod tests {
         let path = std::env::temp_dir().join("executor-config.toml");
 
         let toml = r#"
+[operator]
+database_path = "executor.db"
+poll_interval_seconds = 1
+
+[network]
 chain_id = 421614
 scheduled_protocol_address = "0x1111111111111111111111111111111111111111"
 start_block = 123456
-poll_interval_seconds = 1
-database_path = "executor.db"
 "#;
 
         std::fs::write(&path, toml).expect("temporary config file should be written");
         let config = Config::from_file(&path).expect("valid config file should load");
         std::fs::remove_file(&path).expect("temporary config file should be removed");
 
-        assert_eq!(config.chain_id, 421614);
+        assert_eq!(config.network.chain_id, 421614);
     }
 
     // Verifies that a missing config file returns an error.
@@ -97,11 +111,14 @@ database_path = "executor.db"
         let path = std::env::temp_dir().join("executor-config-invalid.toml");
 
         let toml = r#"
+[operator]
+database_path = "executor.db"
+poll_interval_seconds = 1
+
+[network]
 chain_id = "not-a-number"
 scheduled_protocol_address = "0x1111111111111111111111111111111111111111"
 start_block = 123456
-poll_interval_seconds = 1
-database_path = "executor.db"
 "#;
 
         std::fs::write(&path, toml).expect("temporary config file should be written");
@@ -115,22 +132,25 @@ database_path = "executor.db"
     #[test]
     fn parse_executor_config_from_toml() {
         let toml = r#"
+[operator]
+database_path = "executor.db"
+poll_interval_seconds = 1
+
+[network]
 chain_id = 421614
 scheduled_protocol_address = "0x1111111111111111111111111111111111111111"
 start_block = 123456
-poll_interval_seconds = 1
-database_path = "executor.db"
 "#;
 
         let config = Config::from_toml_str(toml).expect("valid TOML should parse");
 
-        assert_eq!(config.chain_id, 421614);
+        assert_eq!(config.operator.database_path, PathBuf::from("executor.db"));
+        assert_eq!(config.operator.poll_interval_seconds, 1);
+        assert_eq!(config.network.chain_id, 421614);
         assert_eq!(
-            config.scheduled_protocol_address,
+            config.network.scheduled_protocol_address,
             address!("0x1111111111111111111111111111111111111111")
         );
-        assert_eq!(config.start_block, 123456);
-        assert_eq!(config.poll_interval_seconds, 1);
-        assert_eq!(config.database_path, PathBuf::from("executor.db"));
+        assert_eq!(config.network.start_block, 123456);
     }
 }

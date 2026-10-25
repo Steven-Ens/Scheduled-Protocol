@@ -1,14 +1,25 @@
-# Arbitrum Sepolia.
-chain_id = 421614
-
-# Address of the ScheduledProtocol deployment being monitored.
-scheduled_protocol_address = ""
-
-# Replace with the block containing the ScheduledProtocol deployment.
-start_block = 0
-
-# Poll for newly produced blocks once per second.
-poll_interval_seconds = 1
-
+[operator]
 # Local SQLite database path.
 database_path = "executor.db"
+# Interval between block polls in seconds.
+poll_interval_seconds = 1
+# Percentage buffer added to estimated gas costs (10 = 10%).
+gas_cost_buffer_percent = 10
+# Minimum expected profit in USDC base units (100_000 = 0.10 USDC).
+minimum_profit_usdc_units = 100_000
+
+[network]
+# Chain ID of the monitored network.
+chain_id = 0
+# Address of the ScheduledProtocol deployment being monitored.
+scheduled_protocol_address = ""
+# First block to scan for historical PaymentCreated events (ScheduledProtocol deployment block).
+start_block = 0
+# Chainlink ETH/USD price feed proxy.
+eth_usd_price_feed_address = ""
+# Chainlink USDC/USD price feed proxy.
+usdc_usd_price_feed_address = ""
+# Maximum ETH/USD price age (verified heartbeat + 60 seconds).
+# max_eth_usd_price_age_seconds =
+# Maximum USDC/USD price age (verified heartbeat + 60 seconds).
+# max_usdc_usd_price_age_seconds =
