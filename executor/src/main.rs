@@ -5,9 +5,8 @@ mod rpc;
 mod secrets;
 mod storage;
 
+use alloy::{primitives::utils::format_units, providers::Provider, rpc::types::BlockNumberOrTag};
 use std::{error::Error, path::Path};
-
-use alloy::{primitives::utils::format_units, providers::Provider};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -20,15 +19,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
         rpc::connect_and_validate(secrets.rpc_url(), secrets.private_key(), config.chain_id())
             .await?;
 
+    let block = provider
+        .get_block_by_number(BlockNumberOrTag::Latest)
+        .await?
+        .ok_or("Latest block not found")?;
+
+    let current_timestamp = block.header.timestamp;
+
     // Run: $ cargo run -- --oracle-check
     if std::env::args().any(|argument| argument == "--oracle-check") {
-        for (name, address) in [
-            ("ETH/USD", "0xd30e2101a97dcbAeBCBC04F14C3f624E67A35165"),
-            ("USDC/USD", "0x0153002d20B96532C639313c2d54c3dA09109309"),
+        for (name, feed_address, max_price_age_seconds) in [
+            (
+                "ETH/USD",
+                config.eth_usd_price_feed_address(),
+                config.max_eth_usd_price_age_seconds(),
+            ),
+            (
+                "USDC/USD",
+                config.usdc_usd_price_feed_address(),
+                config.max_usdc_usd_price_age_seconds(),
+            ),
         ] {
-            let feed_address = address.parse::<alloy::primitives::Address>()?;
-
             let round = oracle::get_latest_round_data(&provider, feed_address).await?;
+
+            oracle::validate_latest_round_data(&round, current_timestamp, max_price_age_seconds)?;
 
             let decimals = oracle::get_feed_decimals(&provider, feed_address).await?;
 
