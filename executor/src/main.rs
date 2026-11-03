@@ -1,41 +1,76 @@
 mod config;
 mod contract;
 mod oracle;
+mod profitability;
 mod rpc;
 mod secrets;
 mod storage;
 
-use alloy::{primitives::utils::format_units, providers::Provider, rpc::types::BlockNumberOrTag};
+use alloy::{primitives::I256, providers::Provider, rpc::types::BlockNumberOrTag};
 use std::{error::Error, path::Path};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    // Load executor configuration and secrets, connect to the configured chain, then open and
-    // initialize the persistent SQLite state.
     let config = config::Config::from_file(Path::new("executor.toml"))?;
     let secrets = secrets::Secrets::from_file(Path::new(".env"))?;
+
+    let connection = storage::open_database(config.database_path())?;
+    storage::initialize_schema(&connection)?;
+    storage::initialize_chain_state(&connection, config.chain_id())?;
 
     let (provider, executor_address) =
         rpc::connect_and_validate(secrets.rpc_url(), secrets.private_key(), config.chain_id())
             .await?;
 
-    let block = provider
-        .get_block_by_number(BlockNumberOrTag::Latest)
-        .await?
-        .ok_or("Latest block not found")?;
+    let last_processed_block = storage::load_last_processed_block(&connection, config.chain_id())?;
+    println!("Last Processed Block: {last_processed_block:?}");
 
-    let current_timestamp = block.header.timestamp;
+    let from_block = next_scan_start(config.start_block(), last_processed_block)?;
+    let latest_block = provider.get_block_number().await?;
 
-    // Run: $ cargo run -- --oracle-check
-    if std::env::args().any(|argument| argument == "--oracle-check") {
-        for (name, feed_address, max_price_age_seconds) in [
+    // Only scan when there are unprocessed blocks.
+    if from_block <= latest_block {
+        let payment_created_events = contract::get_payment_created_events(
+            &provider,
+            config.scheduled_protocol_address(),
+            from_block,
+            latest_block,
+        )
+        .await?;
+
+        // Save discovered payments before advancing the block checkpoint. Candidate insertion is
+        // idempotent, so rescanning the same block range after a failure cannot create duplicate
+        // candidate rows.
+        for event in payment_created_events {
+            storage::insert_candidate(&connection, event.paymentId)?;
+            println!("Discovered Payment ID: {}", event.paymentId);
+        }
+
+        // Advance the checkpoint only after the entire scanned range has succeeded and all
+        // discovered candidates have been saved.
+        storage::save_last_processed_block(&connection, config.chain_id(), latest_block)?;
+    }
+
+    // Load candidates outside the scan block so previously saved payments are still processed even
+    // when there no new blocks or `PaymentCreated` events.
+    let candidate_payment_ids = storage::load_candidates(&connection)?;
+
+    if !candidate_payment_ids.is_empty() {
+        let block = provider
+            .get_block_by_number(BlockNumberOrTag::Latest)
+            .await?
+            .ok_or("Latest block not found")?;
+
+        let current_timestamp = block.header.timestamp;
+
+        let mut prices = Vec::with_capacity(2);
+
+        for (feed_address, max_price_age_seconds) in [
             (
-                "ETH/USD",
                 config.eth_usd_price_feed_address(),
                 config.max_eth_usd_price_age_seconds(),
             ),
             (
-                "USDC/USD",
                 config.usdc_usd_price_feed_address(),
                 config.max_usdc_usd_price_age_seconds(),
             ),
@@ -46,79 +81,28 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             let decimals = oracle::get_feed_decimals(&provider, feed_address).await?;
 
-            let price = format_units(round.answer, decimals)?;
-
-            println!(
-                "{name}: ${price}, decimals={decimals}, updatedAt={}",
-                round.updatedAt
-            );
+            prices.push((round.answer, decimals));
         }
 
-        return Ok(());
-    }
+        let [
+            (eth_usd_price, eth_usd_decimals),
+            (usdc_usd_price, usdc_usd_decimals),
+        ]: [(I256, u8); 2] = prices
+            .try_into()
+            .map_err(|_| "Expected two oracle results")?;
 
-    let connection = storage::open_database(config.database_path())?;
-    storage::initialize_schema(&connection)?;
-    storage::initialize_chain_state(&connection, config.chain_id())?;
+        for payment_id in candidate_payment_ids {
+            let payment_status = contract::get_payment_status(
+                config.scheduled_protocol_address(),
+                &provider,
+                payment_id,
+            )
+            .await?;
 
-    let last_processed_block = storage::load_last_processed_block(&connection, config.chain_id())?;
-    println!("Last Processed Block: {last_processed_block:?}");
-
-    let from_block = next_scan_start(config.start_block(), last_processed_block)?;
-    let latest_block = provider.get_block_number().await?;
-
-    // Only scan when there are unprocessed blocks. A fresh deployment begins at `start_block`
-    // otherwise scanning resumes from the block after the checkpoint.
-    if from_block <= latest_block {
-        let payment_created_events = contract::get_payment_created_events(
-            &provider,
-            config.scheduled_protocol_address(),
-            from_block,
-            latest_block,
-        )
-        .await?;
-
-        // Persist every discovered payment before advancing the block checkpoint. Candidate
-        // insertion is idempotent, so rescanning the same block range after a failure cannot create
-        // duplicate candidate rows.
-        for event in payment_created_events {
-            storage::insert_candidate(&connection, event.paymentId)?;
-            println!("Discovered Payment ID: {}", event.paymentId);
-        }
-
-        // Advance the checkpoint only after the entire scanned range has succeeded and all
-        // discovered candidates have been persisted.
-        storage::save_last_processed_block(&connection, config.chain_id(), latest_block)?;
-    }
-
-    // Load candidates outside the scan block so previously persisted payments are still processed
-    // even when there are no new blocks or `PaymentCreated` events.
-    let candidate_payment_ids = storage::load_candidates(&connection)?;
-
-    for payment_id in candidate_payment_ids {
-        let payment_status = contract::get_payment_status(
-            config.scheduled_protocol_address(),
-            &provider,
-            payment_id,
-        )
-        .await?;
-
-        // `Active` payments remain candidates for later execution. Terminal payment states no
-        // longer need to be tracked by the executor.
-        match payment_status {
-            contract::IScheduledProtocol::PaymentStatus::Active => {
-                const MAX_EXECUTION_COST_WEI: u128 = 327_000_000_000_000;
-
-                let can_execute = contract::simulate_execute_payment(
-                    config.scheduled_protocol_address(),
-                    &provider,
-                    executor_address,
-                    payment_id,
-                )
-                .await?;
-
-                if can_execute {
-                    let estimated_cost_wei = contract::estimate_execute_payment_cost(
+            // `Active` payments remain candidates for later execution.
+            match payment_status {
+                contract::IScheduledProtocol::PaymentStatus::Active => {
+                    let can_execute = contract::simulate_execute_payment(
                         config.scheduled_protocol_address(),
                         &provider,
                         executor_address,
@@ -126,16 +110,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     )
                     .await?;
 
-                    println!(
-                        "Estimated Execution Cost for Payment ID {payment_id}: {estimated_cost_wei} Wei"
-                    );
-
-                    // Temporary profitability check using a manually calculated wei value
-                    // equivalent to approximately $0.80 at the current ETH/USD price.
-                    if estimated_cost_wei < MAX_EXECUTION_COST_WEI {
-                        println!("Profitable Candidate Payment ID: {payment_id}");
-
-                        let receipt = contract::execute_payment(
+                    if can_execute {
+                        let estimated_cost_wei = contract::estimate_execute_payment_cost(
                             config.scheduled_protocol_address(),
                             &provider,
                             executor_address,
@@ -144,24 +120,50 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         .await?;
 
                         println!(
-                            "Executed Payment ID {payment_id}: {}",
-                            receipt.transaction_hash
+                            "Estimated Execution Cost for Payment ID {payment_id}: {estimated_cost_wei} Wei"
                         );
-                    } else {
-                        println!("Unprofitable Candidate Payment ID: {payment_id}");
-                    }
-                } else {
-                    println!("Candidate Payment ID {payment_id} is not executable yet");
-                }
-            }
-            contract::IScheduledProtocol::PaymentStatus::Cancelled
-            | contract::IScheduledProtocol::PaymentStatus::Completed => {
-                storage::remove_candidate(&connection, payment_id)?;
 
-                println!("Removed Candidate Payment ID: {payment_id}");
-            }
-            _ => {
-                println!("Invalid Payment Status for Payment ID: {payment_id}");
+                        let is_profitable = profitability::is_profitable(
+                            estimated_cost_wei,
+                            eth_usd_price,
+                            eth_usd_decimals,
+                            usdc_usd_price,
+                            usdc_usd_decimals,
+                            config.gas_cost_buffer_percent(),
+                            config.minimum_profit_usdc(),
+                        )?;
+
+                        if is_profitable {
+                            println!("Profitable Candidate Payment ID: {payment_id}");
+
+                            let receipt = contract::execute_payment(
+                                config.scheduled_protocol_address(),
+                                &provider,
+                                executor_address,
+                                payment_id,
+                            )
+                            .await?;
+
+                            println!(
+                                "Executed Payment ID {payment_id}: {}",
+                                receipt.transaction_hash
+                            );
+                        } else {
+                            println!("Unprofitable Candidate Payment ID: {payment_id}");
+                        }
+                    } else {
+                        println!("Candidate Payment ID {payment_id} is not executable yet");
+                    }
+                }
+                contract::IScheduledProtocol::PaymentStatus::Cancelled
+                | contract::IScheduledProtocol::PaymentStatus::Completed => {
+                    storage::remove_candidate(&connection, payment_id)?;
+
+                    println!("Removed Candidate Payment ID: {payment_id}");
+                }
+                _ => {
+                    println!("Invalid Payment Status for Payment ID: {payment_id}");
+                }
             }
         }
     }
