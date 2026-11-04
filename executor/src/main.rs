@@ -124,11 +124,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         );
 
                         let is_profitable = profitability::is_profitable(
-                            estimated_cost_wei,
                             eth_usd_price,
                             eth_usd_decimals,
                             usdc_usd_price,
                             usdc_usd_decimals,
+                            estimated_cost_wei,
                             config.gas_cost_buffer_percent(),
                             config.minimum_profit_usdc(),
                         )?;
