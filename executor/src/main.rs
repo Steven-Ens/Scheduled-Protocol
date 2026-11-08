@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = config::Config::from_file(Path::new("executor.toml"))?;
     let secrets = secrets::Secrets::from_file(Path::new(".env"))?;
 
-    let connection = storage::open_database(config.database_path())?;
+    let mut connection = storage::open_database(config.database_path())?;
     storage::initialize_schema(&connection)?;
     storage::initialize_chain_state(&connection, config.chain_id())?;
 
@@ -38,17 +38,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .await?;
 
+        // Commit discovered candidates and the block checkpoint atomically.
+        let transaction = connection.transaction()?;
+
         // Save discovered payments before advancing the block checkpoint. Candidate insertion is
         // idempotent, so rescanning the same block range after a failure cannot create duplicate
         // candidate rows.
         for event in payment_created_events {
-            storage::insert_candidate(&connection, event.paymentId)?;
+            storage::insert_candidate(&transaction, event.paymentId)?;
             println!("Discovered Payment ID: {}", event.paymentId);
         }
 
         // Advance the checkpoint only after the entire scanned range has succeeded and all
         // discovered candidates have been saved.
-        storage::save_last_processed_block(&connection, config.chain_id(), latest_block)?;
+        storage::save_last_processed_block(&transaction, config.chain_id(), latest_block)?;
+
+        transaction.commit()?;
     }
 
     // Load candidates outside the scan block so previously saved payments are still processed even

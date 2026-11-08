@@ -540,4 +540,62 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn committed_transaction_persists_candidates_and_checkpoint() -> Result<(), Box<dyn Error>> {
+        let mut connection = Connection::open_in_memory()?;
+        initialize_schema(&connection)?;
+        initialize_chain_state(&connection, 421614)?;
+
+        let transaction = connection.transaction()?;
+
+        let payment_id_one = U256::from(0_u64);
+        let payment_id_two = U256::from(1_u64);
+
+        insert_candidate(&transaction, payment_id_one)?;
+        insert_candidate(&transaction, payment_id_two)?;
+
+        save_last_processed_block(&transaction, 421614, 1)?;
+
+        transaction.commit()?;
+
+        let candidates = load_candidates(&connection)?;
+        let last_processed_block = load_last_processed_block(&connection, 421614)?;
+
+        assert!(candidates.contains(&payment_id_one));
+        assert!(candidates.contains(&payment_id_two));
+        assert_eq!(candidates.len(), 2);
+        assert!(last_processed_block == Some(1));
+
+        Ok(())
+    }
+
+    #[test]
+    fn uncommitted_transaction_rolls_back_candidates_and_checkpoint() -> Result<(), Box<dyn Error>>
+    {
+        let mut connection = Connection::open_in_memory()?;
+        initialize_schema(&connection)?;
+        initialize_chain_state(&connection, 421614)?;
+
+        let transaction = connection.transaction()?;
+
+        let payment_id_one = U256::from(0_u64);
+        let payment_id_two = U256::from(1_u64);
+
+        insert_candidate(&transaction, payment_id_one)?;
+        insert_candidate(&transaction, payment_id_two)?;
+
+        save_last_processed_block(&transaction, 421614, 1)?;
+
+        drop(transaction);
+
+        let candidates = load_candidates(&connection)?;
+        let last_processed_block = load_last_processed_block(&connection, 421614)?;
+
+        assert!(!candidates.contains(&payment_id_one));
+        assert!(!candidates.contains(&payment_id_two));
+        assert!(last_processed_block == None);
+
+        Ok(())
+    }
 }
