@@ -17,6 +17,7 @@ use rusqlite::Connection;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    // Setup
     let config = config::Config::from_file(Path::new("executor.toml"))?;
     let secrets = secrets::Secrets::from_file(Path::new(".env"))?;
 
@@ -31,7 +32,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let poll_interval = Duration::from_secs(config.poll_interval_seconds());
 
     loop {
-        run_poll_cycle(&config, &mut connection, &provider, executor_address).await?;
+        // Log polling errors and retry after the configured interval.
+        if let Err(error) =
+            run_poll_cycle(&config, &mut connection, &provider, executor_address).await
+        {
+            eprintln!("Polling Cycle Failed: {error}");
+        }
 
         tokio::time::sleep(poll_interval).await;
     }
@@ -58,6 +64,7 @@ async fn run_poll_cycle(
             latest_block,
         )
         .await?;
+        println!("Scanning Blocks {from_block} to {latest_block}");
 
         // Commit discovered candidates and the block checkpoint atomically.
         let transaction = connection.transaction()?;
