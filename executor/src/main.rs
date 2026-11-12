@@ -6,8 +6,14 @@ mod rpc;
 mod secrets;
 mod storage;
 
-use alloy::{primitives::I256, providers::Provider, rpc::types::BlockNumberOrTag};
-use std::{error::Error, path::Path};
+use std::{error::Error, path::Path, time::Duration};
+
+use alloy::{
+    primitives::{Address, I256},
+    providers::{DynProvider, Provider},
+    rpc::types::BlockNumberOrTag,
+};
+use rusqlite::Connection;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -22,7 +28,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
         rpc::connect_and_validate(secrets.rpc_url(), secrets.private_key(), config.chain_id())
             .await?;
 
-    let last_processed_block = storage::load_last_processed_block(&connection, config.chain_id())?;
+    let poll_interval = Duration::from_secs(config.poll_interval_seconds());
+
+    loop {
+        run_poll_cycle(&config, &mut connection, &provider, executor_address).await?;
+
+        tokio::time::sleep(poll_interval).await;
+    }
+}
+
+async fn run_poll_cycle(
+    config: &config::Config,
+    connection: &mut Connection,
+    provider: &DynProvider,
+    executor_address: Address,
+) -> Result<(), Box<dyn Error>> {
+    let last_processed_block = storage::load_last_processed_block(connection, config.chain_id())?;
     println!("Last Processed Block: {last_processed_block:?}");
 
     let from_block = next_scan_start(config.start_block(), last_processed_block)?;
@@ -31,7 +52,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Only scan when there are unprocessed blocks.
     if from_block <= latest_block {
         let payment_created_events = contract::get_payment_created_events(
-            &provider,
+            provider,
             config.scheduled_protocol_address(),
             from_block,
             latest_block,
@@ -58,7 +79,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Load candidates outside the scan block so previously saved payments are still processed even
     // when there no new blocks or `PaymentCreated` events.
-    let candidate_payment_ids = storage::load_candidates(&connection)?;
+    let candidate_payment_ids = storage::load_candidates(connection)?;
 
     if !candidate_payment_ids.is_empty() {
         let block = provider
@@ -80,11 +101,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 config.max_usdc_usd_price_age_seconds(),
             ),
         ] {
-            let round = oracle::get_latest_round_data(&provider, feed_address).await?;
+            let round = oracle::get_latest_round_data(provider, feed_address).await?;
 
             oracle::validate_latest_round_data(&round, current_timestamp, max_price_age_seconds)?;
 
-            let decimals = oracle::get_feed_decimals(&provider, feed_address).await?;
+            let decimals = oracle::get_feed_decimals(provider, feed_address).await?;
 
             prices.push((round.answer, decimals));
         }
@@ -99,7 +120,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         for payment_id in candidate_payment_ids {
             let payment_status = contract::get_payment_status(
                 config.scheduled_protocol_address(),
-                &provider,
+                provider,
                 payment_id,
             )
             .await?;
@@ -109,7 +130,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 contract::IScheduledProtocol::PaymentStatus::Active => {
                     let can_execute = contract::simulate_execute_payment(
                         config.scheduled_protocol_address(),
-                        &provider,
+                        provider,
                         executor_address,
                         payment_id,
                     )
@@ -118,7 +139,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     if can_execute {
                         let estimated_cost_wei = contract::estimate_execute_payment_cost(
                             config.scheduled_protocol_address(),
-                            &provider,
+                            provider,
                             executor_address,
                             payment_id,
                         )
@@ -143,7 +164,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
                             let receipt = contract::execute_payment(
                                 config.scheduled_protocol_address(),
-                                &provider,
+                                provider,
                                 executor_address,
                                 payment_id,
                             )
@@ -162,7 +183,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
                 contract::IScheduledProtocol::PaymentStatus::Cancelled
                 | contract::IScheduledProtocol::PaymentStatus::Completed => {
-                    storage::remove_candidate(&connection, payment_id)?;
+                    storage::remove_candidate(connection, payment_id)?;
 
                     println!("Removed Candidate Payment ID: {payment_id}");
                 }

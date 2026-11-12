@@ -53,6 +53,10 @@ impl Config {
         &self.operator.database_path
     }
 
+    pub(crate) fn poll_interval_seconds(&self) -> u64 {
+        self.operator.poll_interval_seconds
+    }
+
     pub(crate) fn gas_cost_buffer_percent(&self) -> u64 {
         self.operator.gas_cost_buffer_percent
     }
@@ -97,9 +101,8 @@ mod tests {
 
     use super::Config;
 
-    // Verifies that executor configuration loads from a TOML file.
     #[test]
-    fn load_executor_config_from_file() {
+    fn load_executor_config_from_toml_file_succeeds() {
         let path = std::env::temp_dir().join("executor-config.toml");
 
         let toml = r#"
@@ -126,7 +129,6 @@ max_usdc_usd_price_age_seconds = 86_460
         assert_eq!(config.network.chain_id, 421614);
     }
 
-    // Verifies that a missing config file returns an error.
     #[test]
     fn load_executor_config_from_missing_file_returns_error() {
         let path = std::env::temp_dir().join("executor-config-missing.toml");
@@ -138,7 +140,6 @@ max_usdc_usd_price_age_seconds = 86_460
         assert!(result.is_err());
     }
 
-    // Verifies that invalid executor TOML returns a deserialization error.
     #[test]
     fn load_executor_config_from_invalid_toml_returns_error() {
         let path = std::env::temp_dir().join("executor-config-invalid.toml");
@@ -167,9 +168,8 @@ max_usdc_usd_price_age_seconds = 86_460
         assert!(result.is_err());
     }
 
-    // Verifies that valid executor TOML parses into `Config`.
     #[test]
-    fn parse_executor_config_from_toml() {
+    fn parse_executor_config_from_toml_succeeds() {
         let toml = r#"
 [operator]
 database_path = "executor.db"

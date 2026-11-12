@@ -1,3 +1,6 @@
+// Alloy generated Rust bindings may exceed Clippy's seven argument limit.
+#![allow(clippy::too_many_arguments)]
+
 use std::error::Error;
 
 use alloy::{

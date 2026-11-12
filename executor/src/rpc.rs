@@ -6,7 +6,7 @@ use alloy::{
     signers::local::PrivateKeySigner,
 };
 
-/// Connects to the configured RPC URL and verifies that its chain ID matches the configured chain.
+/// Connects to the configured `RPC_URL` and verifies that its chain ID matches the configured chain.
 pub(crate) async fn connect_and_validate(
     rpc_url: &str,
     private_key: &str,
