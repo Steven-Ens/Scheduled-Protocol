@@ -1,0 +1,16 @@
+# Foundry
+contracts/broadcast/
+contracts/cache/
+contracts/lib/
+contracts/out/
+
+# Rust
+executor/executor.db
+executor/executor.toml
+executor/target/
+
+# Environment
+.env
+
+# Vim Swap Files
+*.swp

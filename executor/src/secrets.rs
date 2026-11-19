@@ -1,0 +1,189 @@
+use std::{error::Error, path::Path};
+
+/// Stores the executor's private runtime secrets.
+pub(crate) struct Secrets {
+    rpc_url: String,
+    private_key: String,
+}
+
+impl Secrets {
+    /// Loads required executor secrets from the `.env` file.
+    pub(crate) fn from_file(path: &Path) -> Result<Self, Box<dyn Error>> {
+        let mut rpc_url = None;
+        let mut private_key = None;
+
+        for item in dotenvy::from_path_iter(path)? {
+            let (key, value) = item?;
+
+            match key.as_str() {
+                "RPC_URL" => rpc_url = Some(value),
+                "PRIVATE_KEY" => private_key = Some(value),
+                // Ignores unrelated `.env` entries.
+                _ => {}
+            }
+        }
+
+        let rpc_url = rpc_url
+            .filter(|value| !value.trim().is_empty())
+            .ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "RPC_URL is required")
+            })?;
+
+        let private_key = private_key
+            .filter(|value| !value.trim().is_empty())
+            .ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "PRIVATE_KEY is required")
+            })?;
+
+        Ok(Self {
+            rpc_url,
+            private_key,
+        })
+    }
+
+    // Getters
+
+    pub(crate) fn rpc_url(&self) -> &str {
+        &self.rpc_url
+    }
+
+    pub(crate) fn private_key(&self) -> &str {
+        &self.private_key
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Secrets;
+
+    #[test]
+    fn load_executor_secrets_from_file_succeeds() {
+        let path = std::env::temp_dir().join("executor-secrets.env");
+
+        let contents = r#"
+RPC_URL=https://example.com
+PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
+"#;
+
+        std::fs::write(&path, contents).expect("temporary secrets file should be written");
+        let secrets = Secrets::from_file(&path).expect("valid secrets file should load");
+        std::fs::remove_file(&path).expect("temporary secrets file should be removed");
+
+        assert_eq!(secrets.rpc_url, "https://example.com");
+        assert_eq!(
+            secrets.private_key,
+            "0x1111111111111111111111111111111111111111111111111111111111111111"
+        );
+    }
+
+    #[test]
+    fn load_executor_secrets_from_missing_file_returns_error() {
+        let path = std::env::temp_dir().join("executor-secrets-missing.env");
+        // Ensure a stale file cannot make this test unexpectedly succeed.
+        let _ = std::fs::remove_file(&path);
+
+        let result = Secrets::from_file(&path);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn load_executor_secrets_from_malformed_file_returns_error() {
+        let path = std::env::temp_dir().join("executor-secrets-malformed.env");
+
+        let contents = r#"
+RPC_URL=https://example.com
+MALFORMED LINE
+PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
+"#;
+
+        std::fs::write(&path, contents).expect("temporary secrets file should be written");
+        let result = Secrets::from_file(&path);
+        std::fs::remove_file(&path).expect("temporary secrets file should be removed");
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn load_executor_secrets_ignore_unrecognized_values_succeeds() {
+        let path = std::env::temp_dir().join("executor-secrets-unrecognized.env");
+
+        let contents = r#"
+RPC_URL=https://example.com
+UNRECOGNIZED_LINE=IGNORED
+PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
+"#;
+
+        std::fs::write(&path, contents).expect("temporary secrets file should be written");
+        let secrets = Secrets::from_file(&path).expect("valid secrets file should load");
+        std::fs::remove_file(&path).expect("temporary secrets file should be removed");
+
+        assert_eq!(secrets.rpc_url, "https://example.com");
+        assert_eq!(
+            secrets.private_key,
+            "0x1111111111111111111111111111111111111111111111111111111111111111"
+        );
+    }
+
+    #[test]
+    fn load_executor_secrets_without_rpc_url_returns_error() {
+        let path = std::env::temp_dir().join("executor-secrets-missing-rpc-url.env");
+
+        let contents = r#"
+PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
+"#;
+
+        std::fs::write(&path, contents).expect("temporary secrets file should be written");
+        let result = Secrets::from_file(&path);
+        std::fs::remove_file(&path).expect("temporary secrets file should be removed");
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn load_executor_secrets_with_empty_rpc_url_returns_error() {
+        let path = std::env::temp_dir().join("executor-secrets-empty-rpc-url.env");
+
+        let contents = r#"
+RPC_URL=
+PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
+"#;
+
+        std::fs::write(&path, contents).expect("temporary secrets file should be written");
+        let result = Secrets::from_file(&path);
+        std::fs::remove_file(&path).expect("temporary secrets file should be removed");
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn load_executor_secrets_without_private_key_returns_error() {
+        let path = std::env::temp_dir().join("executor-secrets-missing-private-key.env");
+
+        let contents = r#"
+RPC_URL=https://example.com
+"#;
+
+        std::fs::write(&path, contents).expect("temporary secrets file should be written");
+        let result = Secrets::from_file(&path);
+        std::fs::remove_file(&path).expect("temporary secrets file should be removed");
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn load_executor_secrets_with_empty_private_key_returns_error() {
+        let path = std::env::temp_dir().join("executor-secrets-empty-private-key.env");
+
+        let contents = r#"
+RPC_URL=https://example.com
+PRIVATE_KEY=
+"#;
+
+        std::fs::write(&path, contents).expect("temporary secrets file should be written");
+        let result = Secrets::from_file(&path);
+        std::fs::remove_file(&path).expect("temporary secrets file should be removed");
+
+        assert!(result.is_err());
+    }
+}
