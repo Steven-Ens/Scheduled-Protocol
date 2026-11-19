@@ -13,6 +13,8 @@ import {BokkyPooBahsDateTimeLibrary} from "BokkyPooBahsDateTimeLibrary/contracts
 import {IScheduledProtocol} from "./interfaces/IScheduledProtocol.sol";
 
 /**
+ * @title ScheduledProtocol
+ * @author Steven Ens
  * @dev Core implementation of Scheduled Protocol.
  */
 contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
@@ -74,15 +76,6 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
             revert ScheduledProtocolInvalidExecuteAfter(executeAfter);
         }
 
-        if (recurrence == RecurrenceType.LastOfMonth) {
-            uint256 dayOfMonth = BokkyPooBahsDateTimeLibrary.getDay(executeAfter);
-            uint256 lastDayOfMonth = BokkyPooBahsDateTimeLibrary.getDaysInMonth(executeAfter);
-
-            if (dayOfMonth != lastDayOfMonth) {
-                revert ScheduledProtocolInvalidLastOfMonthExecuteAfter(executeAfter);
-            }
-        }
-
         if (expiresAfter == 0) {
             revert ScheduledProtocolInvalidExpiresAfter(expiresAfter);
         }
@@ -106,7 +99,7 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
             maxExpiresAfter = 1 days;
         } else if (recurrence == RecurrenceType.Weekly) {
             maxExpiresAfter = 1 weeks;
-        } else if (recurrence == RecurrenceType.Monthly || recurrence == RecurrenceType.LastOfMonth) {
+        } else if (recurrence == RecurrenceType.Monthly) {
             maxExpiresAfter = 28 days;
         }
 
@@ -290,14 +283,6 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
                 && timestamp >= BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, totalOccurrences - 1) + expiresAfter
         ) {
             return PaymentStatus.Completed;
-        } else if (
-            payment.recurrence == RecurrenceType.LastOfMonth
-                && timestamp
-                    >= _lastOfMonthOccurrenceStart(
-                            BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, totalOccurrences - 1)
-                        ) + expiresAfter
-        ) {
-            return PaymentStatus.Completed;
         }
         return PaymentStatus.Active;
     }
@@ -326,28 +311,6 @@ contract ScheduledProtocol is IScheduledProtocol, Ownable2Step {
                 occurrenceIndex--;
                 occurrenceStart = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
             }
-        } else if (recurrence == RecurrenceType.LastOfMonth) {
-            occurrenceIndex = BokkyPooBahsDateTimeLibrary.diffMonths(executeAfter, timestamp);
-            uint256 targetMonthTimestamp = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
-            occurrenceStart = _lastOfMonthOccurrenceStart(targetMonthTimestamp);
-            if (occurrenceStart > timestamp) {
-                occurrenceIndex--;
-                targetMonthTimestamp = BokkyPooBahsDateTimeLibrary.addMonths(executeAfter, occurrenceIndex);
-                occurrenceStart = _lastOfMonthOccurrenceStart(targetMonthTimestamp);
-            }
         }
-    }
-
-    /**
-     * @dev Returns an `occurrenceStart` for the target month's last day, preserving the original anchor's time of day.
-     */
-    function _lastOfMonthOccurrenceStart(uint256 targetMonthTimestamp) internal pure returns (uint256 occurrenceStart) {
-        (uint256 year, uint256 month,, uint256 hour, uint256 minute, uint256 second) =
-            BokkyPooBahsDateTimeLibrary.timestampToDateTime(targetMonthTimestamp);
-
-        uint256 lastDayOfMonth = BokkyPooBahsDateTimeLibrary.getDaysInMonth(targetMonthTimestamp);
-
-        occurrenceStart =
-            BokkyPooBahsDateTimeLibrary.timestampFromDateTime(year, month, lastDayOfMonth, hour, minute, second);
     }
 }

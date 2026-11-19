@@ -197,37 +197,6 @@ contract ExecutionEligibilityTest is Test {
         vm.stopPrank();
     }
 
-    function test_ExecutePayment_RevertWhen_BeforeLastOfMonthOccurrenceStart() public {
-        // April 30th, 2026 @ 10:00 UTC
-        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 30, 10, 0, 0));
-
-        vm.startPrank(payer);
-
-        uint256 paymentId = scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        // May 30th, 2026 @ 10:00 UTC
-        uint256 invalidExecutionWindow = BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 5, 30, 10, 0, 0);
-
-        vm.warp(invalidExecutionWindow);
-
-        vm.stopPrank();
-
-        vm.startPrank(executor);
-
-        vm.expectRevert(abi.encodeWithSelector(IScheduledProtocol.ScheduledProtocolExecutionWindowExpired.selector, 0));
-
-        scheduledProtocol.executePayment(paymentId);
-
-        vm.stopPrank();
-    }
-
     // Helpers
 
     function _createOneTimePayment() private returns (uint256 paymentId) {
