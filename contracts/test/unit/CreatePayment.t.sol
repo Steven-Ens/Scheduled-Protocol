@@ -37,7 +37,6 @@ contract CreatePaymentTest is Test {
     uint24 private constant MAX_VALID_DAILY_EXPIRES_AFTER = 1 days;
     uint24 private constant MAX_VALID_WEEKLY_EXPIRES_AFTER = 1 weeks;
     uint24 private constant MAX_VALID_MONTHLY_EXPIRES_AFTER = 28 days;
-    uint24 private constant MAX_VALID_LAST_OF_MONTH_EXPIRES_AFTER = 28 days;
     uint32 private constant MAX_VALID_RECURRING_TOTAL_OCCURRENCES = type(uint32).max;
 
     function setUp() public {
@@ -286,104 +285,6 @@ contract CreatePaymentTest is Test {
         assertEq(payment.executeAfter, MAX_VALID_EXECUTE_AFTER);
     }
 
-    // `executeAfter` validation for `LastOfMonth`
-
-    function test_CreatePayment_SuccessWhen_LastOfMonthIsLastDayOf28DayMonth() public {
-        // February 28th, 2026 @ 10:00 UTC
-        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 2, 28, 10, 0, 0));
-
-        vm.startPrank(payer);
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            MIN_VALID_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_SuccessWhen_LastOfMonthIsLastDayOf29DayMonth() public {
-        // February 29th, 2028 @ 10:00 UTC
-        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2028, 2, 29, 10, 0, 0));
-
-        vm.startPrank(payer);
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            MIN_VALID_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_SuccessWhen_LastOfMonthIsLastDayOf30DayMonth() public {
-        // April 30th, 2026 @ 10:00 UTC
-        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 4, 30, 10, 0, 0));
-
-        vm.startPrank(payer);
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            MIN_VALID_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_SuccessWhen_LastOfMonthIsLastDayOf31DayMonth() public {
-        // May 31st, 2026 @ 10:00 UTC
-        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 5, 31, 10, 0, 0));
-
-        vm.startPrank(payer);
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            MIN_VALID_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_RevertWhen_LastOfMonthIsNotLastDayOfMonth() public {
-        // January 1st, 2026 @ 10:00 UTC
-        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 1, 10, 0, 0));
-
-        vm.startPrank(payer);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IScheduledProtocol.ScheduledProtocolInvalidLastOfMonthExecuteAfter.selector, executeAfter
-            )
-        );
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            VALID_EXPIRES_AFTER,
-            MIN_VALID_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
     // `expiresAfter` validation
 
     function test_CreatePayment_RevertWhen_ExpiresAfterIsZero() public {
@@ -576,51 +477,6 @@ contract CreatePaymentTest is Test {
         vm.stopPrank();
     }
 
-    function test_CreatePayment_SuccessWhen_LastOfMonthExecutionWindowIsMaximumValidValue() public {
-        // January 31st, 2026 @ 10:00 UTC
-        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
-
-        vm.startPrank(payer);
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            MAX_VALID_LAST_OF_MONTH_EXPIRES_AFTER,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
-    function test_CreatePayment_RevertWhen_LastOfMonthExecutionWindowIsTooLong() public {
-        // January 31st, 2026 @ 10:00 UTC
-        executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
-
-        vm.startPrank(payer);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IScheduledProtocol.ScheduledProtocolExecutionWindowTooLong.selector,
-                IScheduledProtocol.RecurrenceType.LastOfMonth,
-                MAX_VALID_LAST_OF_MONTH_EXPIRES_AFTER + 1,
-                MAX_VALID_LAST_OF_MONTH_EXPIRES_AFTER
-            )
-        );
-
-        scheduledProtocol.createPayment(
-            recipient,
-            VALID_AMOUNT,
-            IScheduledProtocol.RecurrenceType.LastOfMonth,
-            executeAfter,
-            MAX_VALID_LAST_OF_MONTH_EXPIRES_AFTER + 1,
-            VALID_RECURRING_TOTAL_OCCURRENCES
-        );
-
-        vm.stopPrank();
-    }
-
     // `totalOccurrences` validation
 
     // `RecurrenceType` bounds are enforced by Solidity's ABI decoder. These tests cover valid enum values and their
@@ -677,7 +533,7 @@ contract CreatePaymentTest is Test {
     }
 
     function test_CreatePayment_RevertWhen_RecurringHasZeroTotalOccurrences() public {
-        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
+        IScheduledProtocol.RecurrenceType[3] memory recurringTypes = _recurringTypes();
 
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
@@ -700,7 +556,7 @@ contract CreatePaymentTest is Test {
     }
 
     function test_CreatePayment_RevertWhen_RecurringHasOneTotalOccurrence() public {
-        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
+        IScheduledProtocol.RecurrenceType[3] memory recurringTypes = _recurringTypes();
 
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
@@ -723,7 +579,7 @@ contract CreatePaymentTest is Test {
     }
 
     function test_CreatePayment_SuccessWhen_RecurringHasMinimumValidTotalOccurrences() public {
-        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
+        IScheduledProtocol.RecurrenceType[3] memory recurringTypes = _recurringTypes();
 
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
@@ -745,7 +601,7 @@ contract CreatePaymentTest is Test {
     }
 
     function test_CreatePayment_SuccessWhen_RecurringHasMaximumValidTotalOccurrences() public {
-        IScheduledProtocol.RecurrenceType[4] memory recurringTypes = _recurringTypes();
+        IScheduledProtocol.RecurrenceType[3] memory recurringTypes = _recurringTypes();
 
         // January 31st, 2026 @ 10:00 UTC
         executeAfter = uint40(BokkyPooBahsDateTimeLibrary.timestampFromDateTime(2026, 1, 31, 10, 0, 0));
@@ -772,12 +628,11 @@ contract CreatePaymentTest is Test {
 
     // Helpers
 
-    function _recurringTypes() private pure returns (IScheduledProtocol.RecurrenceType[4] memory recurringTypes) {
+    function _recurringTypes() private pure returns (IScheduledProtocol.RecurrenceType[3] memory recurringTypes) {
         recurringTypes = [
             IScheduledProtocol.RecurrenceType.Daily,
             IScheduledProtocol.RecurrenceType.Weekly,
-            IScheduledProtocol.RecurrenceType.Monthly,
-            IScheduledProtocol.RecurrenceType.LastOfMonth
+            IScheduledProtocol.RecurrenceType.Monthly
         ];
     }
 }

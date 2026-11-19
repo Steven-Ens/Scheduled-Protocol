@@ -3,6 +3,8 @@
 pragma solidity 0.8.35;
 
 /**
+ * @title IScheduledProtocol
+ * @author Steven Ens
  * @dev External interface for Scheduled Protocol.
  */
 interface IScheduledProtocol {
@@ -13,8 +15,7 @@ interface IScheduledProtocol {
         None,
         Daily,
         Weekly,
-        Monthly,
-        LastOfMonth
+        Monthly
     }
 
     /**
@@ -70,11 +71,6 @@ interface IScheduledProtocol {
      * @dev `executeAfter` is less than or equal to `block.timestamp`.
      */
     error ScheduledProtocolInvalidExecuteAfter(uint40 executeAfter);
-
-    /**
-     * @dev `executeAfter` for `LastOfMonth` is not the final calendar day of its month.
-     */
-    error ScheduledProtocolInvalidLastOfMonthExecuteAfter(uint40 executeAfter);
 
     /**
      * @dev `expiresAfter` is zero.
