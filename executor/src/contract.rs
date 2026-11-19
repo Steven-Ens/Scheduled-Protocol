@@ -27,8 +27,7 @@ sol! {
             None,
             Daily,
             Weekly,
-            Monthly,
-            LastOfMonth
+            Monthly
         }
 
         event PaymentCreated(
